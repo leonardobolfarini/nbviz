@@ -21,7 +21,6 @@ import {
   Rocket,
   FileText,
   LinkedinLogo,
-  FilePyIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import Head from "next/head";
 import Image from "next/image";
@@ -174,7 +173,7 @@ export default function Home() {
             </div>
           </UsedTechnologies>
         </UsedTechnologiesContainer>
-        {/*<OurInfosContainer>
+        <OurInfosContainer>
           <h2>Equipe</h2>
 
           <div>
@@ -232,7 +231,7 @@ export default function Home() {
               </div>
             </OurInfos>
           </div>
-        </OurInfosContainer>*/}
+        </OurInfosContainer>
       </HomeContainer>
     </MainLayout>
   );
