@@ -22,6 +22,16 @@ Para desenvolvimento local com atualizações em tempo real:
 pip install -e .
 ```
 
+Para modificações na biblioteca:
+
+```bash
+# Gera o novo build
+python -m build
+
+# Tenta o upload
+python -m twine upload dist/*
+```
+
 ### 2. Backend (API)
 
 ```bash
