@@ -14,6 +14,22 @@ def keep_columns(
     return df
 
 
+def article_formatter(artigos: list[str]) -> str:
+    article_formatted = []
+    for artigo in artigos:
+        parts = artigo.split(",")
+
+        authors = parts[0].split(";", 1) if len(parts) > 0 else ""
+        year = parts[-1].replace("(", "").replace(")", "") if len(parts) > 1 else ""
+        other_infos = ", ".join(parts[1:-1]).strip() if len(parts) > 2 else ""
+
+        formatted = f"{authors[0].replace('.', '')}, {year}, {other_infos}"
+
+        article_formatted.append(formatted)
+
+    return "; ".join(article_formatted)
+
+
 def process_wos_data(df: pd.DataFrame, header: list[tuple[str, int]]) -> pd.DataFrame:
     for column, new_index in header:
         if column in df:
@@ -62,24 +78,19 @@ def process_scopus_data(
 
         df.insert(new_index, column, replaced_column_data)
 
-    for column in df.columns:
-        if df[column].dtype == "object":
-            if column == "Abstract":
-                df.loc[:, column] = df[column].apply(
-                    lambda x: (
-                        x.replace("[no abstract available]", "N/A")
-                        if pd.notna(x)
-                        else x
-                    )
-                )
+    if "Abstract" in df.columns:
+        df["Abstract"] = df["Abstract"].replace("[no abstract available]", "N/A")
 
-                df.loc[:, column] = df[column].apply(
-                    lambda x: (
-                        unidecode(x).replace('"', "").lower().strip()
-                        if pd.notna(x)
-                        else x
-                    )
-                )
+        df.loc["Abstract"] = df["Abstract"].apply(
+            lambda x: (
+                unidecode(x).replace('"', "").lower().strip() if pd.notna(x) else x
+            )
+        )
+
+    if "References" in df.columns:
+        df["References"] = df["References"].apply(
+            lambda x: article_formatter(x.split(");")) if pd.notna(x) else x
+        )
 
     return df
 
