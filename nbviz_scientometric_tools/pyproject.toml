@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nbviz_scientometric_tools"
-version = "0.2.4"
+version = "0.2.5"
 description = "Ferramentas para análise bibliométrica e cienciométrica das bases de dados Web of Science e Scopus"
 readme = "README.md"
 dependencies = [

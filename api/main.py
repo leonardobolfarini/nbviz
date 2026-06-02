@@ -79,8 +79,17 @@ def process_files():
             quoting=csv.QUOTE_NONE,
             on_bad_lines="skip",
             dtype=str,
+            encoding="utf-8-sig",
+            encoding_errors="replace",
         )
-        scopus_df = pd.read_csv(scopus_file, sep=",", on_bad_lines="skip", dtype=str)
+        scopus_df = pd.read_csv(
+            scopus_file,
+            sep=",",
+            on_bad_lines="skip",
+            dtype=str,
+            encoding="utf-8-sig",
+            encoding_errors="replace",
+        )
 
         wos_df = st.keep_columns(wos_df, header_txt)
         scopus_df = st.keep_columns(scopus_df, header_csv)
@@ -92,11 +101,13 @@ def process_files():
             processed_scopus_df,
             processed_wos_df,
             wos_to_scopus,
-            ["Authors", "Title", "Source title"],
+            ["Title", "Year"],
         )
         merged_txt_data = st.merge_and_process(
-            processed_wos_df, processed_scopus_df, scopus_to_wos, ["AU", "TI", "SO"]
+            processed_wos_df, processed_scopus_df, scopus_to_wos, ["TI", "PY"]
         )
+
+        print(merged_csv_data.describe())
 
         merged_csv_data.to_csv(
             output_csv, sep=",", quotechar='"', quoting=csv.QUOTE_ALL, index=False
@@ -156,10 +167,24 @@ def get_graph_format():
             raise NotImplementedYet
         if file_extension == ".txt":
             col = "AU" if graph_type == "coauthorship" else "DE"
-            df = pd.read_csv(graph_file, sep="\t", index_col=False, on_bad_lines="skip")
+            df = pd.read_csv(
+                graph_file,
+                sep="\t",
+                index_col=False,
+                on_bad_lines="skip",
+                encoding="utf-8-sig",
+                encoding_errors="replace",
+            )
         elif file_extension == ".csv":
             col = "Authors" if graph_type == "coauthorship" else "Author Keywords"
-            df = pd.read_csv(graph_file, sep=",", index_col=False, on_bad_lines="skip")
+            df = pd.read_csv(
+                graph_file,
+                sep=",",
+                index_col=False,
+                on_bad_lines="skip",
+                encoding="utf-8-sig",
+                encoding_errors="replace",
+            )
         else:
             raise ValueError
 
@@ -209,12 +234,22 @@ def get_chart_format():
         if file_extension == ".txt":
             cols = ["AU", "DE", "SO", "PY"]
             df = pd.read_csv(
-                chart_bar_file, sep="\t", index_col=False, on_bad_lines="skip"
+                chart_bar_file,
+                sep="\t",
+                index_col=False,
+                on_bad_lines="skip",
+                encoding="utf-8-sig",
+                encoding_errors="replace",
             )
         elif file_extension == ".csv":
             cols = ["Authors", "Author Keywords", "Source title", "Year"]
             df = pd.read_csv(
-                chart_bar_file, sep=",", index_col=False, on_bad_lines="skip"
+                chart_bar_file,
+                sep=",",
+                index_col=False,
+                on_bad_lines="skip",
+                encoding="utf-8-sig",
+                encoding_errors="replace",
             )
 
         else:
@@ -237,4 +272,4 @@ def get_chart_format():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5009, debug=False)
+    app.run(host="0.0.0.0", port=5009, debug=True)

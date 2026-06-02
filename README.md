@@ -25,6 +25,9 @@ pip install -e .
 Para modificações na biblioteca:
 
 ```bash
+# Caso não tenha os pacotes para build
+pip install build twine
+
 # Gera o novo build
 python -m build
 
