@@ -1,10 +1,9 @@
-import csv
-import io
 import os
 import uuid
 import zipfile
+from io import BytesIO
 
-import pandas as pd
+import polars as pl
 from flask import Flask, make_response, request, send_file
 from flask_cors import CORS
 from utils.expections import NotImplementedYet
@@ -48,6 +47,7 @@ def process_files():
         ("DOI", 4),
         ("Abstract", 5),
         ("Author Keywords", 6),
+        ("References", 7),
     ]
 
     header_txt = [
@@ -58,6 +58,7 @@ def process_files():
         ("DI", 4),
         ("AB", 5),
         ("DE", 6),
+        ("CR", 7),
     ]
 
     wos_to_scopus = {
@@ -68,34 +69,36 @@ def process_files():
         "DI": "DOI",
         "AB": "Abstract",
         "DE": "Author Keywords",
+        "CR": "References",
     }
 
     scopus_to_wos = {v: k for k, v in wos_to_scopus.items()}
 
     try:
-        wos_df = pd.read_csv(
-            wos_file,
-            sep="\t",
-            quoting=csv.QUOTE_NONE,
-            on_bad_lines="skip",
-            dtype=str,
-            encoding="utf-8-sig",
-            encoding_errors="replace",
+        scopus_df = pl.read_csv(
+            BytesIO(scopus_file.read()),
+            separator=",",
+            ignore_errors=True,
+            infer_schema=False,
+            encoding="latin1",
         )
-        scopus_df = pd.read_csv(
-            scopus_file,
-            sep=",",
-            on_bad_lines="skip",
-            dtype=str,
-            encoding="utf-8-sig",
-            encoding_errors="replace",
+        wos_df = pl.read_csv(
+            BytesIO(wos_file.read()),
+            separator="\t",
+            quote_char=None,
+            ignore_errors=True,
+            infer_schema=False,
+            encoding="latin1",
         )
 
-        wos_df = st.keep_columns(wos_df, header_txt)
+        existing_columns = [col for col, _ in header_csv if col in scopus_df.columns]
+        scopus_df = scopus_df.select(existing_columns)
+
         scopus_df = st.keep_columns(scopus_df, header_csv)
+        wos_df = st.keep_columns(wos_df, header_txt)
 
-        processed_wos_df = st.process_wos_data(wos_df, header_txt)
         processed_scopus_df = st.process_scopus_data(scopus_df, header_csv)
+        processed_wos_df = st.process_wos_data(wos_df, header_txt)
 
         merged_csv_data = st.merge_and_process(
             processed_scopus_df,
@@ -103,28 +106,30 @@ def process_files():
             wos_to_scopus,
             ["Title", "Year"],
         )
-        merged_txt_data = st.merge_and_process(
-            processed_wos_df, processed_scopus_df, scopus_to_wos, ["TI", "PY"]
+
+        merged_txt_data = merged_csv_data.rename(scopus_to_wos)
+
+        merged_csv_data.write_csv(
+            output_csv,
+            separator=",",
+            quote_char='"',
+            quote_style="always",
         )
 
-        print(merged_csv_data.describe())
+        merged_txt_data.write_csv(output_txt, separator="\t")
 
-        merged_csv_data.to_csv(
-            output_csv, sep=",", quotechar='"', quoting=csv.QUOTE_ALL, index=False
-        )
-
-        merged_txt_data.to_csv(output_txt, sep="\t", index=False)
+        id = uuid.uuid4()
 
         with zipfile.ZipFile(zip_path, "w") as zipf:
-            zipf.write(output_csv, arcname="all_in_one.csv")
-            zipf.write(output_txt, arcname="all_in_one.txt")
+            zipf.write(output_csv, arcname=f"all_in_one_{id}.csv")
+            zipf.write(output_txt, arcname=f"all_in_one_{id}.txt")
 
         with open(zip_path, "rb") as f:
-            data = io.BytesIO(f.read())
+            data = BytesIO(f.read())
 
         return send_file(
             data,
-            download_name=f"resultados_{uuid.uuid4()}.zip",
+            download_name=f"resultados_{id}.zip",
             as_attachment=True,
             mimetype="application/zip",
         )
@@ -167,23 +172,23 @@ def get_graph_format():
             raise NotImplementedYet
         if file_extension == ".txt":
             col = "AU" if graph_type == "coauthorship" else "DE"
-            df = pd.read_csv(
-                graph_file,
-                sep="\t",
-                index_col=False,
-                on_bad_lines="skip",
-                encoding="utf-8-sig",
-                encoding_errors="replace",
+            df = pl.read_csv(
+                BytesIO(graph_file.read()),
+                separator="\t",
+                quote_char=None,
+                ignore_errors=True,
+                infer_schema=False,
+                encoding="latin1",
             )
+
         elif file_extension == ".csv":
             col = "Authors" if graph_type == "coauthorship" else "Author Keywords"
-            df = pd.read_csv(
-                graph_file,
-                sep=",",
-                index_col=False,
-                on_bad_lines="skip",
-                encoding="utf-8-sig",
-                encoding_errors="replace",
+            df = pl.read_csv(
+                BytesIO(graph_file.read()),
+                separator=",",
+                ignore_errors=True,
+                infer_schema=False,
+                encoding="latin1",
             )
         else:
             raise ValueError
