@@ -1,133 +1,99 @@
-import csv
+import polars as pl
 
-import pandas as pd
-from unidecode import unidecode
+
+def wos_authors_name_format(name: str) -> str:
+    parts = name.strip().split(",", 1)
+
+    if len(parts) == 2:
+        surname, initials = parts[0].strip(), parts[1].strip()
+        formatted_initials = " ".join(f"{c}." for c in initials if c.isalpha())
+
+        return f"{surname} {formatted_initials}"
+    return name.strip()
+
+
+def wos_authors_field_format(value: str) -> str:
+    if value is None:
+        return None
+    return "; ".join(wos_authors_name_format(name) for name in value.split(";"))
 
 
 def keep_columns(
-    df: pd.DataFrame, columns_to_keep: list[tuple[str, int]]
-) -> pd.DataFrame:
+    df: pl.DataFrame, columns_to_keep: list[tuple[str, int]]
+) -> pl.DataFrame:
     existing_columns = [col for col, _ in columns_to_keep if col in df.columns]
-    df = df[existing_columns].copy()
-
-    for col in df.select_dtypes(include=["object"]):
-        df.loc[:, col] = (
-            df[col]
-            .astype(str)
-            .str.lower()
-            .str.strip()
-            .replace({"nan": pd.NA, "": pd.NA})
-        )
+    df = df.select(existing_columns).with_columns(
+        pl.all()
+        .cast(pl.String)
+        .str.strip_chars()
+        .str.to_lowercase()
+        .replace({"nan": None, "": None})
+    )
 
     return df
 
 
-def article_formatter(artigos: list[str]) -> str:
-    article_formatted = []
-    for artigo in artigos:
-        parts = artigo.split(",")
-
-        authors = parts[0].split(";", 1) if len(parts) > 0 else ""
-        year = parts[-1].replace("(", "").replace(")", "") if len(parts) > 1 else ""
-        other_infos = ", ".join(parts[1:-1]).strip() if len(parts) > 2 else ""
-
-        formatted = f"{authors[0].replace('.', '')}, {year}, {other_infos}"
-        article_formatted.append(formatted)
-
-    return "; ".join(article_formatted)
-
-
-def process_wos_data(df: pd.DataFrame, header: list[tuple[str, int]]) -> pd.DataFrame:
-    for column, new_index in header:
-        if column in df:
-            replaced_column_data = df.pop(column)
+def process_wos_data(df: pl.DataFrame, header: list[tuple[str, int]]) -> pl.DataFrame:
+    expressions = []
+    for column, _ in header:
+        if column in df.columns:
+            expressions.append(pl.col(column))
         else:
-            replaced_column_data = pd.Series([pd.NA] * len(df))
+            expressions.append(pl.lit(None).cast(pl.String).alias(column))
 
-        df.insert(new_index, column, replaced_column_data)
+    df = df.select(expressions)
 
-    if "AU" in df.columns:
-        df.loc[:, "AU"] = df["AU"].apply(
-            lambda x: (
-                "; ".join(
-                    [
-                        " ".join(
-                            [
-                                f"{word[0]}.{word[1:]}"
-                                if len(word) == 2 and word.isupper()
-                                else word
-                                for word in name.split()
-                            ]
-                        )
-                        + "."
-                        if "," in name
-                        else name
-                        for name in x.split(";")
-                    ]
-                )
-                if pd.notna(x)
-                else x
-            )
-        )
-        df.loc[:, "AU"] = df["AU"].apply(
-            lambda x: x.replace(",", "") if pd.notna(x) else x
-        )
-
-    return df
+    return df.with_columns(
+        pl.col("AU")
+        .str.replace_all('"', "")
+        .map_elements(wos_authors_field_format, return_dtype=pl.String),
+        pl.col("CR").str.replace_all('"', ""),
+        pl.col("DE").str.replace_all('"', ""),
+    )
 
 
 def process_scopus_data(
-    df: pd.DataFrame, header: list[tuple[str, int]]
-) -> pd.DataFrame:
-    for column, new_index in header:
-        if column in df:
-            replaced_column_data = df.pop(column)
+    df: pl.DataFrame, header: list[tuple[str, int]]
+) -> pl.DataFrame:
+    expressions = []
+    for column, _ in header:
+        if column in df.columns:
+            expressions.append(pl.col(column))
         else:
-            replaced_column_data = pd.Series([pd.NA] * len(df))
+            expressions.append(pl.lit(None).cast(pl.String).alias(column))
 
-        df.insert(new_index, column, replaced_column_data)
+    df = df.select(expressions)
 
-    if "Abstract" in df.columns:
-        df.loc[:, "Abstract"] = df["Abstract"].replace("[no abstract available]", pd.NA)
+    parts = pl.element().str.split(by=",")
 
-        df.loc[:, "Abstract"] = df["Abstract"].apply(
-            lambda x: (
-                unidecode(x).replace('"', "").lower().strip() if pd.notna(x) else x
-            )
-        )
+    authors = parts.list.get(0).str.split(";").list.get(0).str.replace_all(r"\.", "")
+    year = parts.list.get(-1).str.replace_all(r"\(|\)", "")
+    other_infos = (
+        parts.list.slice(1, parts.list.len() - 2).list.join(", ").str.strip_chars()
+    )
 
-    if "References" in df.columns:
-        df["References"] = df["References"].apply(
-            lambda x: article_formatter(x.split(");")) if pd.notna(x) else x
-        )
-
-    return df
+    return df.with_columns(
+        pl.col("Abstract")
+        .replace("[no abstract available]", None)
+        .str.replace_all('"', "")
+        .str.to_lowercase()
+        .str.strip_chars(),
+        pl.col("References")
+        .str.split(by=");")
+        .list.eval(authors + ", " + year + ", " + other_infos)
+        .list.join("; "),
+    )
 
 
 def merge_and_process(
-    df_target: pd.DataFrame, df_visitor: pd.DataFrame, mapping: dict, subset_cols: list
-) -> pd.DataFrame:
-    visitor_standardized = df_visitor.rename(columns=mapping)
+    df_target: pl.DataFrame, df_visitor: pl.DataFrame, mapping: dict, subset_cols: list
+) -> pl.DataFrame:
+    visitor_standardized = df_visitor.rename(mapping)
 
-    df = pd.concat([df_target, visitor_standardized], ignore_index=True)
+    df = pl.concat([df_target, visitor_standardized])
 
-    doi_col = next(
-        (
-            c
-            for c in ["DOI", "DI", "Authors", "AU"]
-            if c in df.columns and ("doi" in c.lower() or "di" in c.lower())
-        ),
-        None,
-    )
-
-    if doi_col:
-        mask_duplicates = df.duplicated(subset=doi_col)
-        mask_na_values = df[doi_col].isna() | (df[doi_col] == "n/a")
-        mask_to_keep = ~mask_duplicates | mask_na_values
-        df = df[mask_to_keep]
-
-    df = df.drop_duplicates(subset=subset_cols, keep="first")
-
-    df = df.fillna("N/A")
+    with_doi = df.filter(pl.col("DOI").is_not_null()).unique(subset=["DOI"])
+    without_doi = df.filter(pl.col("DOI").is_null())
+    df = pl.concat([with_doi, without_doi]).unique(subset=subset_cols, keep="first")
 
     return df

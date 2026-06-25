@@ -1,5 +1,4 @@
 from .analysis import (
-    article_formatter,
     keep_columns,
     merge_and_process,
     process_scopus_data,

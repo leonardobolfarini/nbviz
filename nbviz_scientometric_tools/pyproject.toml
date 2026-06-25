@@ -8,7 +8,7 @@ version = "0.2.5"
 description = "Ferramentas para análise bibliométrica e cienciométrica das bases de dados Web of Science e Scopus"
 readme = "README.md"
 dependencies = [
-    "pandas",
+    "polars",
     "unidecode",
 ]
 
