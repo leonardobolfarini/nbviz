@@ -1,41 +1,59 @@
-# I.C. - Sistema de Análise e Visualização Cienciométrica 🌐
+# NBVIZ — Plataforma de Análise Cienciométrica
 
-Este repositório contém o ecossistema completo do NBVIZ. O projeto automatiza o processamento de dados bibliométricos e gera visualizações interativas para análise de produção científica.
+Sistema completo para processamento e visualização de dados bibliométricos exportados do **Scopus** e **Web of Science**. Desenvolvido como projeto de iniciação científica na Universidade de Marília (UNIMAR).
 
-### Você pode testá-lo acessando: https://nbviz.labs.unimar.br/
+🔗 **Acesse em:** [nbviz.labs.unimar.br](https://nbviz.labs.unimar.br)
 
-## 🏗️ Estrutura do Projeto
+---
 
-O projeto é organizado como um monorepo:
+## Visão Geral
 
-- **/api**: Backend em Flask que processa os arquivos e serve os dados via JSON.
-- **/web_app**: Frontend em React com visualizações dinâmicas e dashboards.
-- **/scientometric_tools**: Biblioteca core (lib) que contém toda a lógica científica.
+O NBVIZ automatiza o pipeline de análise cienciométrica — da importação dos arquivos brutos até a geração de gráficos e redes de co-ocorrência interativas. O projeto é estruturado como um monorepo com três camadas independentes:
 
-## 🚀 Como Executar
+```
+nbviz/
+├── api/                          # Backend Flask — processamento e endpoints
+├── web_app/                      # Frontend React — dashboards e visualizações
+└── scientometric_tools/          # Biblioteca core — lógica cienciométrica
+```
 
-### 1. Biblioteca (Core)
+---
 
-Para desenvolvimento local com atualizações em tempo real:
+## Módulos
+
+### `/api` — Backend
+API REST em Flask responsável por receber os arquivos de entrada, orquestrar o processamento via `scientometric_tools` e retornar os dados formatados para o frontend.
+
+### `/web_app` — Frontend
+Interface React com visualizações dinâmicas: gráficos de barras, redes de colaboração entre autores, nuvens de palavras-chave e dashboards de produção científica por período.
+
+### `/scientometric_tools` — Biblioteca Core
+Pacote Python publicado no PyPI com toda a lógica de tratamento de dados bibliométricos. Pode ser usado de forma independente em qualquer projeto Python.
+
+---
+
+## Como Executar
+
+### Pré-requisitos
+- Python 3.10+
+- Node.js 18+
+
+### 1. Biblioteca Core
 
 ```bash
+cd scientometric_tools
 pip install -e .
 ```
 
-Para modificações na biblioteca:
+Para publicar uma nova versão no PyPI:
 
 ```bash
-# Caso não tenha os pacotes para build
 pip install build twine
-
-# Gera o novo build
 python -m build
-
-# Tenta o upload
 python -m twine upload dist/*
 ```
 
-### 2. Backend (API)
+### 2. API
 
 ```bash
 cd api
@@ -43,7 +61,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-### 3. Frontend (React)
+### 3. Frontend
 
 ```bash
 cd web_app
@@ -51,19 +69,21 @@ npm install
 npm start
 ```
 
-## 📊 Tecnologias Utilizadas
+---
 
-- **Python** (Pandas, Flask, Setuptools)
-- **React** (Data Visualization)
-- **Bibliometria** (Scopus & Web of Science API/Parsers)
+## Stack
+
+| Camada | Tecnologias |
+|---|---|
+| Backend | Python, Flask, Polars |
+| Frontend | React |
+| Biblioteca | Python, Polars |
+| Fontes de dados | Scopus, Web of Science |
 
 ---
 
 <div align="center">
-  <p>
-    <strong>Pesquisador:</strong> Leonardo Neves Bolfarini | <strong>Orientador:</strong> Rafael Gutierres Castanha
-  </p>
-  <p>
-    <strong>Instituição:</strong> Universidade de Marília (UNIMAR)
-  </p>
+  <p><strong>Pesquisador:</strong> Leonardo Neves Bolfarini</p>
+  <p><strong>Orientador:</strong> Rafael Gutierres Castanha</p>
+  <p><strong>Instituição:</strong> Universidade de Marília — UNIMAR</p>
 </div>
