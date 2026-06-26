@@ -4,7 +4,7 @@ import zipfile
 from io import BytesIO
 
 import polars as pl
-from flask import Flask, make_response, request, send_file
+from flask import Flask, jsonify, make_response, request, send_file
 from flask_cors import CORS
 from utils.expections import NotImplementedYet
 from werkzeug.utils import secure_filename
@@ -169,7 +169,8 @@ def get_graph_format():
 
     try:
         if (graph_type != "coauthorship") and (graph_type != "keywords"):
-            raise NotImplementedYet
+            raise ValueError("Only coauthorship and keyword graphs are implemented.")
+
         if file_extension == ".txt":
             col = "AU" if graph_type == "coauthorship" else "DE"
             df = pl.read_csv(
@@ -193,7 +194,9 @@ def get_graph_format():
         else:
             raise ValueError
 
-        graph_data = st.graph_formatter(df, col)
+        separators = [";"] if (col == "Authors" or col == "AU") else [";", ",", "and"]
+
+        graph_data = st.graph_formatter(df, col, separators)
 
         return graph_data
     except ValueError as e:
@@ -238,23 +241,22 @@ def get_chart_format():
     try:
         if file_extension == ".txt":
             cols = ["AU", "DE", "SO", "PY"]
-            df = pd.read_csv(
-                chart_bar_file,
-                sep="\t",
-                index_col=False,
-                on_bad_lines="skip",
-                encoding="utf-8-sig",
-                encoding_errors="replace",
+            df = pl.read_csv(
+                BytesIO(chart_bar_file.read()),
+                separator="\t",
+                quote_char=None,
+                ignore_errors=True,
+                infer_schema=False,
+                encoding="latin1",
             )
         elif file_extension == ".csv":
             cols = ["Authors", "Author Keywords", "Source title", "Year"]
-            df = pd.read_csv(
-                chart_bar_file,
-                sep=",",
-                index_col=False,
-                on_bad_lines="skip",
-                encoding="utf-8-sig",
-                encoding_errors="replace",
+            df = pl.read_csv(
+                BytesIO(chart_bar_file.read()),
+                separator=",",
+                ignore_errors=True,
+                infer_schema=False,
+                encoding="latin1",
             )
 
         else:
@@ -262,13 +264,17 @@ def get_chart_format():
 
         chart_data_return = []
         for col in cols:
-            chart_data = st.count_data(df, col)
+            separators = [";"]
+            if col == "Author Keywords" or col == "DE":
+                separators = [";", ",", "and"]
+                print(separators)
+            chart_data = st.get_counts(df, col, "label", separators)
 
             json_key = label_map.get(col, col.lower())
 
             chart_data_return.append({json_key: chart_data})
 
-        return chart_data_return
+        return jsonify(chart_data_return)
 
     except ValueError as e:
         return f"File extension not supported: {str(e)}", 404
