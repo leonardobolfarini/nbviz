@@ -4,5 +4,5 @@ from .analysis import (
     process_scopus_data,
     process_wos_data,
 )
-from .count_data import count_data
+from .count_data import get_counts
 from .graph import graph_formatter

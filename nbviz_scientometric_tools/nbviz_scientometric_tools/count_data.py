@@ -1,22 +1,29 @@
-import pandas as pd
+import polars as pl
 
 
-def get_counts(df: pd.DataFrame, column_name: str, output_key_name: str):
+def get_counts(
+    df: pl.DataFrame,
+    column_name: str,
+    output_key_name: str,
+    separators: list[str] = [";"],
+) -> list[dict[str, int]]:
     if column_name not in df.columns:
         return []
 
-    series = df[column_name].fillna("").astype(str)
+    series = df[column_name].fill_null("")
 
-    counts = series.str.split(";").explode().str.strip().value_counts()
+    for sep in separators:
+        series = series.str.replace_all(sep, ";")
 
-    result_data = []
-    for term, count in counts.items():
-        if term and str(term).lower() not in ["nan", "n/a", ""]:
-            result_data.append({output_key_name: term, "count": int(count)})
-    return result_data
+    counts = (
+        series.str.split(";")
+        .explode()
+        .str.strip_chars()
+        .value_counts()
+        .filter(
+            pl.col(column_name).is_not_null()
+            & pl.col(column_name).str.to_lowercase().is_in(["nan", "n/a", ""]).not_()
+        )
+    )
 
-
-def count_data(df: pd.DataFrame, col: str):
-    chart_data = get_counts(df, col, "label")
-
-    return chart_data
+    return counts.rename({column_name: output_key_name}).to_dicts()
