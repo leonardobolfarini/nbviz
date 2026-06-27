@@ -3,7 +3,6 @@ import uuid
 import zipfile
 from io import BytesIO
 
-import polars as pl
 from flask import Flask, jsonify, make_response, request, send_file
 from flask_cors import CORS
 from utils.expections import NotImplementedYet
@@ -75,21 +74,8 @@ def process_files():
     scopus_to_wos = {v: k for k, v in wos_to_scopus.items()}
 
     try:
-        scopus_df = pl.read_csv(
-            BytesIO(scopus_file.read()),
-            separator=",",
-            ignore_errors=True,
-            infer_schema=False,
-            encoding="latin1",
-        )
-        wos_df = pl.read_csv(
-            BytesIO(wos_file.read()),
-            separator="\t",
-            quote_char=None,
-            ignore_errors=True,
-            infer_schema=False,
-            encoding="latin1",
-        )
+        scopus_df = st.read_scopus_file(scopus_file.read())
+        wos_df = st.read_wos_file(wos_file)
 
         existing_columns = [col for col, _ in header_csv if col in scopus_df.columns]
         scopus_df = scopus_df.select(existing_columns)
@@ -173,24 +159,12 @@ def get_graph_format():
 
         if file_extension == ".txt":
             col = "AU" if graph_type == "coauthorship" else "DE"
-            df = pl.read_csv(
-                BytesIO(graph_file.read()),
-                separator="\t",
-                quote_char=None,
-                ignore_errors=True,
-                infer_schema=False,
-                encoding="latin1",
-            )
+            df = st.read_wos_file(graph_file)
 
         elif file_extension == ".csv":
             col = "Authors" if graph_type == "coauthorship" else "Author Keywords"
-            df = pl.read_csv(
-                BytesIO(graph_file.read()),
-                separator=",",
-                ignore_errors=True,
-                infer_schema=False,
-                encoding="latin1",
-            )
+            df = st.read_scopus_file(graph_file)
+
         else:
             raise ValueError
 
@@ -241,23 +215,11 @@ def get_chart_format():
     try:
         if file_extension == ".txt":
             cols = ["AU", "DE", "SO", "PY"]
-            df = pl.read_csv(
-                BytesIO(chart_bar_file.read()),
-                separator="\t",
-                quote_char=None,
-                ignore_errors=True,
-                infer_schema=False,
-                encoding="latin1",
-            )
+            df = st.read_wos_file(chart_bar_file)
+
         elif file_extension == ".csv":
             cols = ["Authors", "Author Keywords", "Source title", "Year"]
-            df = pl.read_csv(
-                BytesIO(chart_bar_file.read()),
-                separator=",",
-                ignore_errors=True,
-                infer_schema=False,
-                encoding="latin1",
-            )
+            df = st.read_scopus_file(chart_bar_file)
 
         else:
             raise ValueError
@@ -267,7 +229,6 @@ def get_chart_format():
             separators = [";"]
             if col == "Author Keywords" or col == "DE":
                 separators = [";", ",", "and"]
-                print(separators)
             chart_data = st.get_counts(df, col, "label", separators)
 
             json_key = label_map.get(col, col.lower())
@@ -283,4 +244,4 @@ def get_chart_format():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5009, debug=True)
+    app.run(host="0.0.0.0", port=5009, debug=False)
