@@ -3,6 +3,8 @@ from .analysis import (
     merge_and_process,
     process_scopus_data,
     process_wos_data,
+    read_scopus_file,
+    read_wos_file,
 )
 from .count_data import get_counts
 from .graph import graph_formatter

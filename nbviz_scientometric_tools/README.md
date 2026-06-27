@@ -24,16 +24,13 @@ pip install scientometric_tools
 ### Leitura e padronização
 
 ```python
-import polars as pl
 import scientometric_tools as st
 
 # WoS (.txt)
-wos = pl.read_csv("savedrecs.txt", separator="\t", quote_char=None,
-                  ignore_errors=True, infer_schema=False, encoding="latin1")
+wos = st.read_wos_file("savedrecs.txt")
 
 # Scopus (.csv)
-scopus = pl.read_csv("scopus.csv", separator=",",
-                     ignore_errors=True, infer_schema=False, encoding="latin1")
+scopus = st.read_scopus_file("scopus.csv")
 
 header_txt = [("AU",0),("TI",1),("PY",2),("SO",3),("DI",4),("AB",5),("DE",6),("CR",7)]
 header_csv = [("Authors",0),("Title",1),("Year",2),("Source title",3),
@@ -110,12 +107,14 @@ graph = st.graph_formatter(merged, "Authors")
 
 | Função | Descrição |
 |---|---|
+| `read_wos_file(file)` | Lê o arquivo extraído da base de dados Web of Science |
+| `read_scopus_file(file)` | Lê o arquivo extraído da base de dados Scopus |
 | `keep_columns(df, columns)` | Seleciona colunas, normaliza strings e trata nulos |
 | `process_wos_data(df, header)` | Processa e padroniza dados do Web of Science |
 | `process_scopus_data(df, header)` | Processa e padroniza dados do Scopus |
 | `merge_and_process(target, visitor, mapping, subset_cols)` | Merge entre bases com deduplicação por DOI |
 | `get_counts(df, column, output_key, separators)` | Contagem de termos para gráficos |
-| `graph_formatter(df, column)` | Gera estrutura de grafo de co-ocorrência |
+| `graph_formatter(df, column, separators)` | Gera estrutura de grafo de coautoria ou co-ocorrência |
 
 ---
 

@@ -1,3 +1,5 @@
+from io import BytesIO
+
 import polars as pl
 
 
@@ -16,6 +18,33 @@ def wos_authors_field_format(value: str) -> str:
     if value is None:
         return None
     return "; ".join(wos_authors_name_format(name) for name in value.split(";"))
+
+
+def read_scopus_file(file) -> pl.DataFrame:
+    if hasattr(file, "read"):
+        file = BytesIO(file.read())
+
+    return pl.read_csv(
+        file,
+        separator=",",
+        ignore_errors=True,
+        infer_schema=False,
+        encoding="latin1",
+    )
+
+
+def read_wos_file(file) -> pl.DataFrame:
+    if hasattr(file, "read"):
+        file = BytesIO(file.read())
+
+    return pl.read_csv(
+        file,
+        separator="\t",
+        quote_char=None,
+        ignore_errors=True,
+        infer_schema=False,
+        encoding="latin1",
+    )
 
 
 def keep_columns(
