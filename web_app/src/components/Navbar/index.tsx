@@ -1,4 +1,4 @@
-import { Database, Info, TrendUp, Users } from "@phosphor-icons/react/dist/ssr";
+import { Database, Info, Stack, TrendUp, Users } from "@phosphor-icons/react/dist/ssr";
 import { NavBarContainer, NavBarItem } from "./styles";
 import { useRouter } from "next/router";
 
@@ -14,6 +14,10 @@ export function NavBar() {
       <NavBarItem href="/mesclagem" active={pathname === "/mesclagem"}>
         <Database size={20} />
         Mesclagem
+      </NavBarItem>
+      <NavBarItem href="/unificar" active={pathname === "/unificar"}>
+        <Stack size={20} />
+        Unificar
       </NavBarItem>
       <NavBarItem href="/redes" active={pathname === "/redes"}>
         <Users size={20} />
