@@ -152,17 +152,17 @@ export default function SendDownloadView() {
         />
       </Head>
       <FilesContainer>
+        <FilesToSendHeader>
+          <header>
+            <Database size={24} />
+            <h1>Mesclagem de Bases de Dados</h1>
+          </header>
+          <footer>
+            Faça upload dos arquivos do Scopus e Web of Science para gerar uma
+            base unificada
+          </footer>
+        </FilesToSendHeader>
         <FilesToSend as="form" onSubmit={handleSubmit(handleSendFiles)}>
-          <FilesToSendHeader>
-            <header>
-              <Database size={24} />
-              <h1>Mesclagem de Bases de Dados</h1>
-            </header>
-            <footer>
-              Faça upload dos arquivos do Scopus e Web of Science para gerar uma
-              base unificada
-            </footer>
-          </FilesToSendHeader>
           <FilesToSendContainer>
             <FilesToSendContent>
               <div>
