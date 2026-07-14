@@ -17,10 +17,17 @@ export default function Document() {
           rel="stylesheet"
         />
 
+        <link
+          rel="icon"
+          type="image/x-icon"
+          href="/favicon.png"
+        />
+
         <style
           id="stitches"
           dangerouslySetInnerHTML={{ __html: getCssText() }}
         />
+
       </Head>
       <body>
         <Main />
