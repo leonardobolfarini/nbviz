@@ -113,6 +113,13 @@ def process_scopus_data(
         .list.join("; "),
     )
 
+def merge_same_database(lazyframes: list[pl.LazyFrame]) -> pl.LazyFrame:
+    if not lazyframes:
+        return pl.LazyFrame()
+
+    df_concat = pl.concat(lazyframes, how="vertical_relaxed")
+
+    return df_concat
 
 def merge_and_process(
     df_target: pl.DataFrame, df_visitor: pl.DataFrame, mapping: dict, subset_cols: list

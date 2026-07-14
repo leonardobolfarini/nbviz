@@ -3,7 +3,7 @@
 Biblioteca Python para processamento de dados bibliométricos exportados do **Scopus** e **Web of Science (WoS)**. Desenvolvida para o projeto [NBVIZ](https://nbviz.labs.unimar.br), mas projetada para uso independente em qualquer pipeline de análise cienciométrica.
 
 ```bash
-pip install scientometric_tools
+pip install nbviz_scientometric_tools
 ```
 
 ---

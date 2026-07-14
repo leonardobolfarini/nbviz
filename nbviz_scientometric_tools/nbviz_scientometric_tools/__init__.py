@@ -5,6 +5,7 @@ from .analysis import (
     process_wos_data,
     read_scopus_file,
     read_wos_file,
+    merge_same_database
 )
 from .count_data import get_counts
 from .graph import graph_formatter
