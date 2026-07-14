@@ -19,6 +19,50 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 
+@app.route("/merge_same_base", methods=["Options", "Post"])
+def merge_same_base_files():
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        return response
+
+    if "concat_files" not in request.files:
+        return "É necessário a inserção de ao menos 2 arquivos para concateção.", 400
+
+    files = request.files.getlist("concat_files")
+    database = request.form.get("databaseType")
+
+    if database == "wos":
+        dfs = [st.read_wos_file(f) for f in files]
+        output = os.path.join(OUTPUT_FOLDER, f"wos_concat_{uuid.uuid4()}.txt")
+        configs = {
+            "separator": "\t",
+        }
+
+    elif database == "scopus":
+        dfs = [st.read_scopus_file(f) for f in files]
+        output = os.path.join(OUTPUT_FOLDER, f"scopus_concat_{uuid.uuid4()}.txt")
+        configs = {
+            "separator": ",",
+        }
+
+    else:
+        return "Not implemented yet.", 500
+
+    lazyframes = [df.lazy() for df in dfs]
+
+    concat = st.merge_same_database(lazyframes)
+
+    concat.sink_csv(output, **configs)
+
+    return send_file(
+        output,
+        as_attachment=True,
+        mimetype="application/zip"
+    )
+
 @app.route("/process", methods=["Options", "Post"])
 def process_files():
     if request.method == "OPTIONS":
@@ -172,7 +216,8 @@ def get_graph_format():
 
         graph_data = st.graph_formatter(df, col, separators)
 
-        return graph_data
+        return jsonify(graph_data)
+
     except ValueError as e:
         return f"File extension not supported: {str(e)}", 404
     except TypeError as e:
