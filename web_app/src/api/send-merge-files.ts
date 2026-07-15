@@ -1,12 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { api } from '../lib/axios'
 
-interface SendFilesProps {
+interface MergeFilesProps {
   scopusFile: File
   wosFile: File
 }
 
-export async function SendFiles({ scopusFile, wosFile }: SendFilesProps) {
+export async function MergeFiles({ scopusFile, wosFile }: MergeFilesProps) {
   const formData = new FormData()
   formData.append('scopusFile', scopusFile)
   formData.append('wosFile', wosFile)
