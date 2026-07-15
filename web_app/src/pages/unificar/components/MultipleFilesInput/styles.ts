@@ -7,6 +7,8 @@ export const MainMultipleFilesInputContainer = styled('div', {
   gap: '1rem',
 
   div: {
+    display: 'flex',
+    alignItems: 'center',
     padding: '0.5rem',
     background: '$blue100',
     borderRadius: '8px',
