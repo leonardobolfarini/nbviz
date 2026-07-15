@@ -1,7 +1,15 @@
 import { FileText, Trash } from "@phosphor-icons/react/dist/ssr";
 import { FileDisplayContainer, FileDisplayHeader } from "./styles";
 
-export function FileDisplay() {
+interface FileDisplayProps {
+  fileName: string
+  fileSize: string
+  onDelete: () => void
+}
+
+export function FileDisplay({
+  fileName, fileSize, onDelete
+}: FileDisplayProps) {
   return (
     <FileDisplayContainer>
       <FileDisplayHeader>
@@ -9,11 +17,11 @@ export function FileDisplay() {
           <FileText size={20} />
         </span>
         <div>
-          <h2>teste.csv</h2>
-          <p>125.8 KB</p>
+          <h2>{fileName}</h2>
+          <p>{fileSize}</p>
         </div>
       </FileDisplayHeader>
-      <Trash size={16} />
+      <Trash size={16} onClick={onDelete} style={{ cursor: 'pointer' }} />
     </FileDisplayContainer>
   )
 }
