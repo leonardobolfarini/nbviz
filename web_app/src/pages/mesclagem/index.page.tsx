@@ -10,7 +10,7 @@ import {
 import { Button } from "../../components/Button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { SendFiles } from "@/src/api/send-files";
+import { MergeFiles } from "@/src/api/send-merge-files";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import JSZip from "jszip";
@@ -77,8 +77,8 @@ export default function SendDownloadView() {
     resolver: zodResolver(formFilesSchema),
   });
 
-  const { mutateAsync: sendFilesFn } = useMutation({
-    mutationFn: SendFiles,
+  const { mutateAsync: MergeFilesFn } = useMutation({
+    mutationFn: MergeFiles,
   });
 
   const scopusFileValue = watch("scopusFile");
@@ -94,9 +94,9 @@ export default function SendDownloadView() {
     }
   }, [downloadUrls]);
 
-  async function handleSendFiles(files: FormFilesProps) {
+  async function handleMergeFiles(files: FormFilesProps) {
     try {
-      const response = await sendFilesFn({
+      const response = await MergeFilesFn({
         scopusFile: files.scopusFile,
         wosFile: files.wosFile,
       });
@@ -162,7 +162,7 @@ export default function SendDownloadView() {
             base unificada
           </footer>
         </FilesToSendHeader>
-        <FilesToSend as="form" onSubmit={handleSubmit(handleSendFiles)}>
+        <FilesToSend as="form" onSubmit={handleSubmit(handleMergeFiles)}>
           <FilesToSendContainer>
             <FilesToSendContent>
               <div>
