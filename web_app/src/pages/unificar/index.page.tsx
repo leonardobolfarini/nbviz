@@ -1,10 +1,31 @@
+import { Plus, Stack } from "@phosphor-icons/react/dist/ssr";
 import Head from "next/head";
 import { MainLayout } from "../layout";
-import { ContainerHead, DatabaseChose, DatabaseSelection, FilesForm, FilesInputContainer, MainContainer } from "./styles";
-import { FileText, Plus, Stack } from "@phosphor-icons/react/dist/ssr";
 import { MultipleFilesInput } from "./components/MultipleFilesInput";
+import { ContainerHead, DatabaseChose, DatabaseSelection, FilesDisplay, FilesForm, FilesFormButton, FilesInputContainer, MainContainer } from "./styles";
+import { ChangeEvent, useRef, useState } from "react";
+import { FileDisplay } from "./components/FileDisplay";
 
 export default function Unificar() {
+  const [database, setDatabase] = useState<"wos" | "scopus">("scopus")
+  const [files, setFiles] = useState<File[]>([])
+
+  const hasFiles = files.length > 0
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleButtonClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const selectedFiles = Array.from(event.target.files)
+      setFiles(selectedFiles)
+    }
+  }
+
+
   return (
     <MainLayout>
       <Head>
@@ -26,21 +47,37 @@ export default function Unificar() {
           <DatabaseChose>
             <h2>Base dos Arquivos</h2>
             <div>
-              <DatabaseSelection isSelected>Scopus</DatabaseSelection>
-              <DatabaseSelection>Web of Science</DatabaseSelection>
+              <DatabaseSelection isSelected={database == "scopus"} onClick={() => {
+                setDatabase("scopus")
+              }}>Scopus</DatabaseSelection>
+              <DatabaseSelection isSelected={database == "wos"} onClick={() => {
+                setDatabase("wos")
+              }}>Web of Science</DatabaseSelection>
             </div>
           </DatabaseChose>
           <FilesInputContainer>
-            <MultipleFilesInput />
-            <button>
-              <Plus size={32} />
+            <input
+              type="file"
+              multiple
+              accept={database == "scopus" ? '.csv' : '.txt'}
+              ref={fileInputRef}
+              onChange={handleFileChange}
+            />
+            <MultipleFilesInput files={files} database={database} />
+            <label onClick={handleButtonClick}>
+              <Plus size={16} />
               Adicionar Arquivos
-            </button>
+            </label>
           </FilesInputContainer>
-          <button>
-            <Stack size={32} />
+          <FilesDisplay>
+            <FileDisplay />
+            <FileDisplay />
+            <FileDisplay />
+          </FilesDisplay>
+          <FilesFormButton disabled={!hasFiles}>
+            <Stack size={20} />
             Gerar Arquivos Unificados
-          </button>
+          </FilesFormButton>
         </FilesForm>
       </MainContainer>
     </MainLayout>
