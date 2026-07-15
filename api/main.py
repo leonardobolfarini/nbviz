@@ -19,19 +19,20 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 
-@app.route("/merge_same_base", methods=["Options", "Post"])
+@app.route("/unify_files", methods=["Options", "Post"])
 def merge_same_base_files():
     if request.method == "OPTIONS":
         response = make_response()
         response.headers.add("Access-Control-Allow-Origin", "*")
         response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
         response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        response.headers.add("Access-Control-Expose-Headers", "Content-Disposition")
         return response
 
-    if "concat_files" not in request.files:
-        return "É necessário a inserção de ao menos 2 arquivos para concateção.", 400
+    if "files" not in request.files:
+        return "A parametro 'files' é requirido no corpo da requisição.", 400
 
-    files = request.files.getlist("concat_files")
+    files = request.files.getlist("files")
     database = request.form.get("databaseType")
 
     if database == "wos":
@@ -43,7 +44,7 @@ def merge_same_base_files():
 
     elif database == "scopus":
         dfs = [st.read_scopus_file(f) for f in files]
-        output = os.path.join(OUTPUT_FOLDER, f"scopus_concat_{uuid.uuid4()}.txt")
+        output = os.path.join(OUTPUT_FOLDER, f"scopus_concat_{uuid.uuid4()}.csv")
         configs = {
             "separator": ",",
         }
@@ -57,11 +58,15 @@ def merge_same_base_files():
 
     concat.sink_csv(output, **configs)
 
-    return send_file(
+    resp = send_file(
         output,
         as_attachment=True,
-        mimetype="application/zip"
+        mimetype="text/plain",
+        download_name=os.path.basename(output)
     )
+    resp.headers.add("Access-Control-Expose-Headers", "Content-Disposition")
+
+    return resp
 
 @app.route("/process", methods=["Options", "Post"])
 def process_files():
