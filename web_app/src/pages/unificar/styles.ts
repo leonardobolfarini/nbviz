@@ -173,3 +173,21 @@ export const FilesFormButton = styled("button", {
     background: '$slate500'
   }
 })
+
+
+export const GeneratedFileContainer = styled('div', {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '1rem',
+  marginTop: "2rem",
+  padding: "1rem",
+
+  border: "1px solid $slate300",
+  borderRadius: "8px",
+
+  backgroundColor: "$white",
+
+  h2: {
+    fontSize: '1.25rem'
+  }
+})
