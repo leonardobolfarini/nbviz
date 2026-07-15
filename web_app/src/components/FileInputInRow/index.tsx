@@ -13,6 +13,7 @@ import React, {
   useImperativeHandle,
 } from "react";
 import { FileInputContent, FileInputLabel, FileInputStyle } from "./styles";
+import { formatBytes } from "@/src/utils/formatBytes";
 
 interface FileInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   idhtml: string;
@@ -61,7 +62,7 @@ export const FileInputInRow = forwardRef<HTMLInputElement, FileInputProps>(
             {file ? (
               <span>
                 <p>{file[0]}</p>
-                <footer>{(Number(file[1]) / 1000).toFixed(1)}KB</footer>
+                <footer>{formatBytes(Number(file[1]))}</footer>
               </span>
             ) : (
               <span>
