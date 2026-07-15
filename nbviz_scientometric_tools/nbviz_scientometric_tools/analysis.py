@@ -117,7 +117,7 @@ def merge_same_database(lazyframes: list[pl.LazyFrame]) -> pl.LazyFrame:
     if not lazyframes:
         return pl.LazyFrame()
 
-    df_concat = pl.concat(lazyframes, how="vertical_relaxed")
+    df_concat = pl.concat(lazyframes, how="diagonal")
 
     return df_concat
 
