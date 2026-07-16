@@ -72,21 +72,25 @@ export default function Unificar() {
 
   async function handleUnify (data: FormSchema) {
     try {
-      const { blob, fileName } = await unifyFilesFn({
+      const { downloadUrl, fileName } = await unifyFilesFn({
         database: data.database,
         files: data.files
       })
 
-      console.log(blob, fileName)
-      const url = URL.createObjectURL(blob)
+      const fullUrl = `${process.env.NEXT_PUBLIC_API_URL}${downloadUrl}`
 
-      setUnifiedFile({ url, fileName })
+      setUnifiedFile({ url: fullUrl, fileName })
 
       const generatedContainer = document.getElementById("generated")
       generatedContainer?.scrollIntoView({
         behavior: "smooth",
         block: "start",
       })
+
+      const a = document.createElement('a')
+      a.href = fullUrl
+      a.download = fileName
+      a.click()
     } catch (error) {
       console.error(error);
     }
