@@ -4,6 +4,7 @@ WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV POLARS_MAX_THREADS=16
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -18,4 +19,4 @@ COPY . .
 
 EXPOSE 5009
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5009", "--workers", "2", "--timeout", "120", "main:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5009", "--workers", "1", "--worker-class", "gthread", "--threads", "4", "--timeout", "300", "main:app"]
