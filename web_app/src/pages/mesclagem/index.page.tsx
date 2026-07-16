@@ -96,49 +96,31 @@ export default function SendDownloadView() {
 
   async function handleMergeFiles(files: FormFilesProps) {
     try {
-      const response = await MergeFilesFn({
+      const { csv, txt } = await MergeFilesFn({
         scopusFile: files.scopusFile,
         wosFile: files.wosFile,
       });
 
-      const blob = new Blob([response], { type: "application/zip" });
-      const zip = await JSZip.loadAsync(blob);
-      const extractedFiles: DownloadUrlsTypes = {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+
+      setDownloadUrls({
         csvFile: {
-          csvFileName: null,
-          csvUrl: null,
+          csvUrl: `${apiUrl}${csv.downloadUrl}`,
+          csvFileName: csv.fileName
         },
         txtFile: {
-          txtFileName: null,
-          txtUrl: null,
-        },
-      };
-
-      for (const fileName of Object.keys(zip.files)) {
-        const file = zip.files[fileName];
-        if (!file.dir) {
-          const fileBlob = await file.async("blob");
-          const url = URL.createObjectURL(fileBlob);
-          if (fileName.endsWith(".csv")) {
-            extractedFiles.csvFile.csvUrl = url;
-            extractedFiles.csvFile.csvFileName = fileName;
-          } else if (fileName.endsWith(".txt")) {
-            extractedFiles.txtFile.txtUrl = url;
-            extractedFiles.txtFile.txtFileName = fileName;
-          }
+          txtUrl: `${apiUrl}${txt.downloadUrl}`,
+          txtFileName: txt.fileName
         }
-      }
+      });
 
-      setDownloadUrls(extractedFiles);
-      if (extractedFiles) {
-        const generatedContainer = document.getElementById("generated");
-        generatedContainer?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }
+      const generatedContainer = document.getElementById("generated");
+      generatedContainer?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     } catch (error) {
-      alert(error);
+      console.error(error);
     }
   }
 
