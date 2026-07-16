@@ -1,8 +1,10 @@
 import os
 import uuid
 import zipfile
-from io import BytesIO
+import time
+import threading
 
+from io import BytesIO
 from flask import Flask, jsonify, make_response, request, send_file
 from flask_cors import CORS
 from utils.expections import NotImplementedYet
@@ -10,72 +12,76 @@ from werkzeug.utils import secure_filename
 
 import nbviz_scientometric_tools as st
 
+FILE_TTL_SECONDS = 30 * 60
+OUTPUT_FOLDER = "outputs"
+
 app = Flask(__name__)
 CORS(app)
-
-UPLOAD_FOLDER = "uploads"
-OUTPUT_FOLDER = "outputs"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
+def cleanup_old_files():
+    while True:
+        now = time.time()
+        for folder in [OUTPUT_FOLDER]:
+            for fname in os.listdir(folder):
+                fpath = os.path.join(folder, fname)
+                try:
+                    if os.path.isfile(fpath):
+                        age = now - os.path.getmtime(fpath)
+                        if age > FILE_TTL_SECONDS:
+                            os.remove(fpath)
+                except FileNotFoundError:
+                    pass
+        time.sleep(300)
 
-@app.route("/unify_files", methods=["Options", "Post"])
+threading.Thread(target=cleanup_old_files, daemon=True).start()
+
+@app.route("/download/<file_name>", methods=["GET"])
+def download_file(file_name):
+    path = os.path.join(OUTPUT_FOLDER, file_name)
+    if not os.path.exists(path):
+        return jsonify({"message": "Arquivo não encontrado ou expirado."}), 404
+
+    resp = send_file(path, as_attachment=True, download_name=file_name)
+    resp.headers.add("Access-Control-Expose-Headers", "Content-Disposition")
+
+    return resp
+
+@app.route("/unify_files", methods=["OPTIONS", "POST"])
 def merge_same_base_files():
     if request.method == "OPTIONS":
         response = make_response()
         response.headers.add("Access-Control-Allow-Origin", "*")
         response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
         response.headers.add("Access-Control-Allow-Headers", "Content-Type")
-        response.headers.add("Access-Control-Expose-Headers", "Content-Disposition")
         return response
 
     if "files" not in request.files:
-        return "A parametro 'files' é requirido no corpo da requisição.", 400
+        return jsonify({"message": "O parâmetro 'files' é requerido no corpo da requisição."}), 400
 
     files = request.files.getlist("files")
     database = request.form.get("databaseType")
 
-    output = ''
-    try:
-        if database == "wos":
-            dfs = [st.read_wos_file(f) for f in files]
-            output = os.path.join(OUTPUT_FOLDER, f"wos_concat_{uuid.uuid4()}.txt")
-            configs = {
-                "separator": "\t",
-            }
+    if database == "wos":
+        dfs = [st.read_wos_file(f) for f in files]
+        file_name = f"wos_concat_{uuid.uuid4()}.txt"
+        configs = {"separator": "\t"}
+    elif database == "scopus":
+        dfs = [st.read_scopus_file(f) for f in files]
+        file_name = f"scopus_concat_{uuid.uuid4()}.csv"
+        configs = {"separator": ","}
+    else:
+        return jsonify({"message": "Not implemented yet."}), 500
 
-        elif database == "scopus":
-            dfs = [st.read_scopus_file(f) for f in files]
-            output = os.path.join(OUTPUT_FOLDER, f"scopus_concat_{uuid.uuid4()}.csv")
-            configs = {
-                "separator": ",",
-            }
+    output = os.path.join(OUTPUT_FOLDER, file_name)
+    lazyframes = [df.lazy() for df in dfs]
+    concat = st.merge_same_database(lazyframes)
+    concat.sink_csv(output, **configs)
 
-        else:
-            return "Not implemented yet.", 500
-
-        lazyframes = [df.lazy() for df in dfs]
-
-        concat = st.merge_same_database(lazyframes)
-
-        concat.sink_csv(output, **configs)
-
-        resp = send_file(
-            output,
-            as_attachment=True,
-            mimetype="text/plain",
-            download_name=os.path.basename(output)
-        )
-        resp.headers.add("Access-Control-Expose-Headers", "Content-Disposition")
-
-        return resp
-
-    except Exception as e:
-        return f"Erro ao unir arquivos: {str(e)}", 500
-
-    finally:
-        if os.path.exists(output):
-            os.remove(output)
+    return jsonify({
+        "download_url": f"/download/{file_name}",
+        "file_name": file_name,
+    })
 
 @app.route("/process", methods=["Options", "Post"])
 def process_files():
@@ -87,14 +93,15 @@ def process_files():
         return response
 
     if "scopusFile" not in request.files or "wosFile" not in request.files:
-        return "Arquivos de entrada necessários.", 400
+        return jsonify({"message": "Arquivos de entrada necessários."}), 400
 
     scopus_file = request.files["scopusFile"]
     wos_file = request.files["wosFile"]
     requisition_id = str(uuid.uuid4())
     output_csv = os.path.join(OUTPUT_FOLDER, f"all_in_one_{requisition_id}.csv")
     output_txt = os.path.join(OUTPUT_FOLDER, f"all_in_one_{requisition_id}.txt")
-    zip_path = os.path.join(OUTPUT_FOLDER, f"resultados_{requisition_id}.zip")
+    zip_name = f"resultados_{requisition_id}.zip"
+    zip_path = os.path.join(OUTPUT_FOLDER, zip_name)
 
     header_csv = [
         ("Authors", 0),
@@ -162,29 +169,20 @@ def process_files():
 
         merged_txt_data.write_csv(output_txt, separator="\t")
 
-        id = uuid.uuid4()
-
         with zipfile.ZipFile(zip_path, "w") as zipf:
-            zipf.write(output_csv, arcname=f"all_in_one_{id}.csv")
-            zipf.write(output_txt, arcname=f"all_in_one_{id}.txt")
+            zipf.write(output_csv, arcname=f"all_in_one_{requisition_id}.csv")
+            zipf.write(output_txt, arcname=f"all_in_one_{requisition_id}.txt")
 
-        with open(zip_path, "rb") as f:
-            data = BytesIO(f.read())
-
-        return send_file(
-            data,
-            download_name=f"resultados_{id}.zip",
-            as_attachment=True,
-            mimetype="application/zip",
-        )
+        return jsonify({
+            "download_url": f"/download/{zip_name}",
+            "file_name": zip_name
+        })
 
     except Exception as e:
-        return f"Erro ao unir arquivos: {str(e)}", 500
+        return jsonify({ "message": f"Erro ao unir arquivos: {str(e)}" }), 500
 
     finally:
-        files_to_remove = [output_csv, output_txt, zip_path]
-
-        for f in files_to_remove:
+        for f in [output_csv, output_txt]:
             if os.path.exists(f):
                 os.remove(f)
 
