@@ -35,38 +35,47 @@ def merge_same_base_files():
     files = request.files.getlist("files")
     database = request.form.get("databaseType")
 
-    if database == "wos":
-        dfs = [st.read_wos_file(f) for f in files]
-        output = os.path.join(OUTPUT_FOLDER, f"wos_concat_{uuid.uuid4()}.txt")
-        configs = {
-            "separator": "\t",
-        }
+    output = ''
+    try:
+        if database == "wos":
+            dfs = [st.read_wos_file(f) for f in files]
+            output = os.path.join(OUTPUT_FOLDER, f"wos_concat_{uuid.uuid4()}.txt")
+            configs = {
+                "separator": "\t",
+            }
 
-    elif database == "scopus":
-        dfs = [st.read_scopus_file(f) for f in files]
-        output = os.path.join(OUTPUT_FOLDER, f"scopus_concat_{uuid.uuid4()}.csv")
-        configs = {
-            "separator": ",",
-        }
+        elif database == "scopus":
+            dfs = [st.read_scopus_file(f) for f in files]
+            output = os.path.join(OUTPUT_FOLDER, f"scopus_concat_{uuid.uuid4()}.csv")
+            configs = {
+                "separator": ",",
+            }
 
-    else:
-        return "Not implemented yet.", 500
+        else:
+            return "Not implemented yet.", 500
 
-    lazyframes = [df.lazy() for df in dfs]
+        lazyframes = [df.lazy() for df in dfs]
 
-    concat = st.merge_same_database(lazyframes)
+        concat = st.merge_same_database(lazyframes)
 
-    concat.sink_csv(output, **configs)
+        concat.sink_csv(output, **configs)
 
-    resp = send_file(
-        output,
-        as_attachment=True,
-        mimetype="text/plain",
-        download_name=os.path.basename(output)
-    )
-    resp.headers.add("Access-Control-Expose-Headers", "Content-Disposition")
+        resp = send_file(
+            output,
+            as_attachment=True,
+            mimetype="text/plain",
+            download_name=os.path.basename(output)
+        )
+        resp.headers.add("Access-Control-Expose-Headers", "Content-Disposition")
 
-    return resp
+        return resp
+
+    except Exception as e:
+        return f"Erro ao unir arquivos: {str(e)}", 500
+
+    finally:
+        if os.path.exists(output):
+            os.remove(output)
 
 @app.route("/process", methods=["Options", "Post"])
 def process_files():
