@@ -17,13 +17,19 @@ export async function MergeFiles({ scopusFile, wosFile }: MergeFilesProps) {
       },
     })
 
-    if (!response.data?.download_url) {
+    if (!response.data?.csv && !response.data?.txt) {
       throw new Error('A resposta do servidor está vazia ou inválida.')
     }
 
     return {
-      downloadUrl: response.data.download_url,
-      fileName: response.data.file_name
+      csv: {
+        downloadUrl: response.data?.csv.download_url,
+        fileName: response.data?.csv.file_name
+      },
+      txt: {
+        downloadUrl: response.data?.txt.download_url,
+        fileName: response.data?.txt.file_name
+      }
     }
   } catch (error: any) {
     if (error.response) {
