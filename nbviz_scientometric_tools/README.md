@@ -50,6 +50,29 @@ wos_processed = st.process_wos_data(wos, header_txt)
 scopus_processed = st.process_scopus_data(scopus, header_csv)
 ```
 
+## Merge de arquivos de mesma base
+
+Se você possui vários arquivos exportados da mesma plataforma (por exemplo, múltiplos arquivos `.csv` da Scopus ou vários `.txt` da Web of Science) e deseja unificá-los de forma extremamente performática utilizando o motor *Lazy* do Polars:
+
+```python
+import scientometric_tools as st
+
+# 1. Carregue os arquivos na memória (modo Eager)
+arquivos_scopus = ["scopus_part1.csv", "scopus_part2.csv", "scopus_part3.csv"]
+dfs = [st.read_scopus_file(arq) for arq in arquivos_scopus]
+
+# 2. Converta os DataFrames para LazyFrames para otimização de memória
+lazy_frames = [df.lazy() for df in dfs]
+
+# 3. Funde todas as bases de uma só vez de forma otimizada
+# (Gera um LazyFrame unificado)
+unificado_lazy = st.merge_same_database(lazy_frames)
+
+# 4. Grave o resultado direto no disco usando sink_csv
+# (Isso processa a fusão sem estourar a memória RAM do servidor/máquina)
+unificado_lazy.sink_csv("scopus_completo.csv", separator=",")
+```
+
 ### Merge entre bases
 
 ```python
@@ -112,6 +135,7 @@ graph = st.graph_formatter(merged, "Authors")
 | `keep_columns(df, columns)` | Seleciona colunas, normaliza strings e trata nulos |
 | `process_wos_data(df, header)` | Processa e padroniza dados do Web of Science |
 | `process_scopus_data(df, header)` | Processa e padroniza dados do Scopus |
+| `merge_same_database(lazyframes)` | Funde múltiplos LazyFrames da mesma base de dados de forma otimizada |
 | `merge_and_process(target, visitor, mapping, subset_cols)` | Merge entre bases com deduplicação por DOI |
 | `get_counts(df, column, output_key, separators)` | Contagem de termos para gráficos |
 | `graph_formatter(df, column, separators)` | Gera estrutura de grafo de coautoria ou co-ocorrência |
