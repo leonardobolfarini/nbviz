@@ -86,11 +86,6 @@ export default function Unificar() {
         behavior: "smooth",
         block: "start",
       })
-
-      const a = document.createElement('a')
-      a.href = fullUrl
-      a.download = fileName
-      a.click()
     } catch (error) {
       console.error(error);
     }
