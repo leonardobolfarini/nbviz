@@ -98,10 +98,10 @@ def process_files():
     scopus_file = request.files["scopusFile"]
     wos_file = request.files["wosFile"]
     requisition_id = str(uuid.uuid4())
-    output_csv = os.path.join(OUTPUT_FOLDER, f"all_in_one_{requisition_id}.csv")
-    output_txt = os.path.join(OUTPUT_FOLDER, f"all_in_one_{requisition_id}.txt")
-    zip_name = f"resultados_{requisition_id}.zip"
-    zip_path = os.path.join(OUTPUT_FOLDER, zip_name)
+    csv_name = f"all_in_one_{requisition_id}.csv"
+    txt_name = f"all_in_one_{requisition_id}.txt"
+    output_csv = os.path.join(OUTPUT_FOLDER, csv_name)
+    output_txt = os.path.join(OUTPUT_FOLDER, txt_name)
 
     header_csv = [
         ("Authors", 0),
@@ -169,22 +169,19 @@ def process_files():
 
         merged_txt_data.write_csv(output_txt, separator="\t")
 
-        with zipfile.ZipFile(zip_path, "w") as zipf:
-            zipf.write(output_csv, arcname=f"all_in_one_{requisition_id}.csv")
-            zipf.write(output_txt, arcname=f"all_in_one_{requisition_id}.txt")
-
         return jsonify({
-            "download_url": f"/download/{zip_name}",
-            "file_name": zip_name
+            "csv": {
+                'download_url': f'/download/{csv_name}',
+                'file_name': csv_name
+            },
+            "txt": {
+                'download_url': f'/download/{txt_name}',
+                'file_name': txt_name
+            },
         })
 
     except Exception as e:
         return jsonify({ "message": f"Erro ao unir arquivos: {str(e)}" }), 500
-
-    finally:
-        for f in [output_csv, output_txt]:
-            if os.path.exists(f):
-                os.remove(f)
 
 
 @app.route("/graph", methods=["Options", "Post"])
