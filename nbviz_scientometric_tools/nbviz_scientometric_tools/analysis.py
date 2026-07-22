@@ -29,7 +29,7 @@ def read_scopus_file(file) -> pl.DataFrame:
         separator=",",
         ignore_errors=True,
         infer_schema=False,
-        encoding="latin1",
+        encoding="utf-8-sig",
     )
 
 
@@ -43,7 +43,7 @@ def read_wos_file(file) -> pl.DataFrame:
         quote_char=None,
         ignore_errors=True,
         infer_schema=False,
-        encoding="latin1",
+        encoding="utf-8-sig",
     )
 
 
