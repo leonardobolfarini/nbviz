@@ -1,3 +1,5 @@
+OUTPUT_FOLDER = "outputs"
+
 HEADER_CSV = [
     ("Authors", 0),
     ("Title", 1),

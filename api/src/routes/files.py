@@ -3,11 +3,9 @@ import uuid
 from flask import Blueprint, jsonify, request, send_file
 import nbviz_scientometric_tools as st
 
-from src.utils.constants import HEADER_CSV, HEADER_TXT, WOS_TO_SCOPUS, SCOPUS_TO_WOS
+from src.utils.constants import HEADER_CSV, HEADER_TXT, WOS_TO_SCOPUS, SCOPUS_TO_WOS, OUTPUT_FOLDER
 
 files_bp = Blueprint('files', __name__)
-
-OUTPUT_FOLDER = "outputs"
 
 @files_bp.route("/download/<file_name>", methods=["GET"])
 def download_file(file_name):
