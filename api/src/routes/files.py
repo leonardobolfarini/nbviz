@@ -1,10 +1,20 @@
 import os
 import uuid
+
+from dotenv import load_dotenv
 from flask import Blueprint, jsonify, request, send_file
+from src.utils.constants import (
+    HEADER_SCOPUS,
+    HEADER_WOS,
+    OPENALEX_TO_SCOPUS,
+    OUTPUT_FOLDER,
+    WOS_TO_SCOPUS,
+)
+from src.utils.expections import OutputFormatNotPassed
+
 import nbviz_scientometric_tools as st
 
-from src.utils.constants import HEADER_CSV, HEADER_TXT, WOS_TO_SCOPUS, SCOPUS_TO_WOS, OUTPUT_FOLDER
-
+load_dotenv()
 files_bp = Blueprint('files', __name__)
 
 @files_bp.route("/download/<file_name>", methods=["GET"])
@@ -47,61 +57,75 @@ def merge_same_base_files():
         "file_name": file_name,
     })
 
-
 @files_bp.route("/process", methods=["POST"])
 def process_files():
-    if "scopusFile" not in request.files or "wosFile" not in request.files:
-        return jsonify({"message": "Arquivos de entrada necessários."}), 400
+    scopus_file = request.files.get("scopusFile")
+    wos_file = request.files.get("wosFile")
+    openalex_search = request.form.get("searchTerm")
+    output_format = request.form.get("outputFormat")
+    limit = request.form.get("limit", type=int)
 
-    scopus_file = request.files["scopusFile"]
-    wos_file = request.files["wosFile"]
+    openalex_key = os.getenv("OPENALEX_API_KEY")
+    dfs_to_concat = []
 
+    if not output_format:
+        raise OutputFormatNotPassed('The property "outputFormat" is required to generate the output.')
+
+    if scopus_file:
+        scopus_df = st.read_scopus_file(scopus_file.read())
+        scopus_df = st.keep_columns(scopus_df, HEADER_SCOPUS)
+        processed_scopus_df = st.process_scopus_data(scopus_df, HEADER_SCOPUS)
+        dfs_to_concat.append(processed_scopus_df)
+
+    if wos_file:
+        wos_df = st.read_wos_file(wos_file)
+        wos_df = st.keep_columns(wos_df, HEADER_WOS)
+        processed_wos_df = st.process_wos_data(wos_df, HEADER_WOS)
+        processed_wos_df = processed_wos_df.rename(WOS_TO_SCOPUS)
+        dfs_to_concat.append(processed_wos_df)
+
+
+    if openalex_search:
+        processed_oa_df = st.fetch_openalex_works(openalex_search, openalex_key, limit=limit)
+        processed_oa_df = processed_oa_df.rename(OPENALEX_TO_SCOPUS)
+        dfs_to_concat.append(processed_oa_df)
+
+    if len(dfs_to_concat) <= 1:
+        return jsonify({
+            "message": "Is required two or more databases to realize the concatenation."
+        }), 400
+
+    if output_format == 'scopus' or output_format == 'openalex':
+        configs = {
+            'separator': ",",
+            'quote_char': '"',
+            'quote_style': "always",
+        }
+    elif output_format == 'wos':
+        configs = {
+            'separator': "\t"
+        }
+    else:
+        configs = {}
+
+    output_extension = 'csv' if output_format == 'scopus' or output_format == 'openalex' else 'txt'
     requisition_id = str(uuid.uuid4())
-    csv_name = f"all_in_one_{requisition_id}.csv"
-    txt_name = f"all_in_one_{requisition_id}.txt"
-    output_csv = os.path.join(OUTPUT_FOLDER, csv_name)
-    output_txt = os.path.join(OUTPUT_FOLDER, txt_name)
+
+    output_name = f"all_in_one_{requisition_id}.{output_extension}"
+    output = os.path.join(OUTPUT_FOLDER, output_name)
 
     try:
-        scopus_df = st.read_scopus_file(scopus_file.read())
-        wos_df = st.read_wos_file(wos_file)
-
-        existing_columns = [col for col, _ in HEADER_CSV if col in scopus_df.columns]
-        scopus_df = scopus_df.select(existing_columns)
-
-        scopus_df = st.keep_columns(scopus_df, HEADER_CSV)
-        wos_df = st.keep_columns(wos_df, HEADER_TXT)
-
-        processed_scopus_df = st.process_scopus_data(scopus_df, HEADER_CSV)
-        processed_wos_df = st.process_wos_data(wos_df, HEADER_TXT)
-
-        merged_csv_data = st.merge_and_process(
-            processed_scopus_df,
-            processed_wos_df,
-            WOS_TO_SCOPUS,
+        merged_data = st.merge_and_process(
+            dfs_to_concat,
             ["Title", "Year"],
         )
 
-        merged_txt_data = merged_csv_data.rename(SCOPUS_TO_WOS)
-
-        merged_csv_data.write_csv(
-            output_csv,
-            separator=",",
-            quote_char='"',
-            quote_style="always",
-        )
-        merged_txt_data.write_csv(output_txt, separator="\t")
+        merged_data.write_csv(output, **configs)
 
         return jsonify({
-            "csv": {
-                'download_url': f'/download/{csv_name}',
-                'file_name': csv_name
-            },
-            "txt": {
-                'download_url': f'/download/{txt_name}',
-                'file_name': txt_name
-            },
+            'download_url': f'/download/{output_name}',
+            'file_name': output_name
         })
 
     except Exception as e:
-        return jsonify({ "message": f"Erro ao unir arquivos: {str(e)}" }), 500
+        return jsonify({ "message": f"Error trying to concat the files: {str(e)}" }), 500

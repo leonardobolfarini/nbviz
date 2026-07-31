@@ -1,6 +1,6 @@
 OUTPUT_FOLDER = "outputs"
 
-HEADER_CSV = [
+HEADER_SCOPUS = [
     ("Authors", 0),
     ("Title", 1),
     ("Year", 2),
@@ -11,7 +11,7 @@ HEADER_CSV = [
     ("References", 7),
 ]
 
-HEADER_TXT = [
+HEADER_WOS = [
     ("AU", 0),
     ("TI", 1),
     ("PY", 2),
@@ -34,6 +34,17 @@ WOS_TO_SCOPUS = {
 }
 
 SCOPUS_TO_WOS = {v: k for k, v in WOS_TO_SCOPUS.items()}
+
+OPENALEX_TO_SCOPUS = {
+    "Author": "Authors",
+    "Title": "Title",
+    "Year": "Year",
+    "Source": "Source title",
+    "DOI": "DOI",
+    "Abstract": "Abstract",
+    "Keyword": "Author Keywords",
+    "References": "References",
+}
 
 LABEL_MAP = {
     "AU": "authors",
