@@ -29,7 +29,7 @@ def read_scopus_file(file) -> pl.DataFrame:
         separator=",",
         ignore_errors=True,
         infer_schema=False,
-        encoding="latin1",
+        encoding="utf-8-sig",
     )
 
 
@@ -43,7 +43,7 @@ def read_wos_file(file) -> pl.DataFrame:
         quote_char=None,
         ignore_errors=True,
         infer_schema=False,
-        encoding="latin1",
+        encoding="utf-8-sig",
     )
 
 
@@ -122,11 +122,9 @@ def merge_same_database(lazyframes: list[pl.LazyFrame]) -> pl.LazyFrame:
     return df_concat
 
 def merge_and_process(
-    df_target: pl.DataFrame, df_visitor: pl.DataFrame, mapping: dict, subset_cols: list
+    dfs_to_concat: list[pl.DataFrame], subset_cols: list
 ) -> pl.DataFrame:
-    visitor_standardized = df_visitor.rename(mapping)
-
-    df = pl.concat([df_target, visitor_standardized])
+    df = pl.concat(dfs_to_concat)
 
     with_doi = df.filter(pl.col("DOI").is_not_null()).unique(subset=["DOI"])
     without_doi = df.filter(pl.col("DOI").is_null())
