@@ -42,5 +42,8 @@
     "@types/react-cytoscapejs": "^1.2.6",
     "@types/react-dom": "^18",
     "typescript": "^5"
+  },
+  "overrides": {
+    "qs": "^6.15.4"
   }
 }
