@@ -7,7 +7,7 @@
 *.pdf
 
 !requirements.txt
-.venv/
+venv/
 __pycache__
 
 .vscode/
