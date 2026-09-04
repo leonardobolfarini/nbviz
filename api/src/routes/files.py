@@ -112,18 +112,22 @@ def process_files():
     requisition_id = str(uuid.uuid4())
 
     output_name = f"all_in_one_{requisition_id}.{output_extension}"
-    output = os.path.join(OUTPUT_FOLDER, output_name)
+    output_removed = f"removed_{requisition_id}.{output_extension}"
+    output_works = os.path.join(OUTPUT_FOLDER, output_name)
+    output_removed_works = os.path.join(OUTPUT_FOLDER, output_removed)
 
     try:
-        merged_data = st.merge_and_process(
+        merged_data, removed_merged_data = st.merge_and_process(
             dfs_to_concat,
             ["Title", "Year"],
         )
 
-        merged_data.write_csv(output, **configs)
+        merged_data.write_csv(output_works, **configs)
+        removed_merged_data.write_csv(output_removed_works, **configs)
 
         return jsonify({
-            'download_url': f'/download/{output_name}',
+            'download_works_url': f'/download/{output_name}',
+            'download_removed_url': f'/download/{output_removed}',
             'file_name': output_name
         })
 
