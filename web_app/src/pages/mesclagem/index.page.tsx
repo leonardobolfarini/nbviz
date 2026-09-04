@@ -1,3 +1,16 @@
+import { MergeFiles } from "@/src/api/send-merge-files";
+import { FileInput } from "@/src/components/FileInput";
+import { LoadingIcon } from "@/src/styles/global";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Database } from "@phosphor-icons/react/dist/ssr";
+import { useMutation } from "@tanstack/react-query";
+import Head from "next/head";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Button } from "../../components/Button";
+import { MainLayout } from "../layout";
+import { GeneratedFile } from "./components/GeneratedFile";
 import {
   ButtonContainer,
   FilesContainer,
@@ -7,20 +20,6 @@ import {
   FilesToSendHeader,
   GeneratedFilesContainer,
 } from "./styles";
-import { Button } from "../../components/Button";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { MergeFiles } from "@/src/api/send-merge-files";
-import { useEffect, useState } from "react";
-import { z } from "zod";
-import JSZip from "jszip";
-import { FileInput } from "@/src/components/FileInput";
-import { useMutation } from "@tanstack/react-query";
-import { MainLayout } from "../layout";
-import { Database } from "@phosphor-icons/react/dist/ssr";
-import { GeneratedFile } from "./components/GeneratedFile";
-import Head from "next/head";
-import { LoadingIcon } from "@/src/styles/global";
 
 const formFilesSchema = z.object({
   scopusFile: z
@@ -48,19 +47,18 @@ const formFilesSchema = z.object({
       },
     )
     .transform((files) => files[0]),
-});
+
+  outputFormat: z.enum(["scopus", "wos"])
+
+})
+
 
 export type FormFilesProps = z.infer<typeof formFilesSchema>;
 
 interface DownloadUrlsTypes {
-  csvFile: {
-    csvUrl: string | null;
-    csvFileName: string | null;
-  };
-  txtFile: {
-    txtUrl: string | null;
-    txtFileName: string | null;
-  };
+  removedUrl: string | null
+  worksUrl: string | null
+  fileName: string | null
 }
 
 export default function SendDownloadView() {
@@ -72,9 +70,13 @@ export default function SendDownloadView() {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting: isProcessing },
   } = useForm<FormFilesProps>({
     resolver: zodResolver(formFilesSchema),
+    defaultValues: {
+      outputFormat: 'scopus'
+    }
   });
 
   const { mutateAsync: MergeFilesFn } = useMutation({
@@ -83,6 +85,7 @@ export default function SendDownloadView() {
 
   const scopusFileValue = watch("scopusFile");
   const wosFileValue = watch("wosFile");
+  const outputFormat = watch("outputFormat")
 
   useEffect(() => {
     if (downloadUrls) {
@@ -96,22 +99,16 @@ export default function SendDownloadView() {
 
   async function handleMergeFiles(files: FormFilesProps) {
     try {
-      const { csv, txt } = await MergeFilesFn({
+      const { downloadRemovedUrl, downloadWorksUrl, fileName } = await MergeFilesFn({
         scopusFile: files.scopusFile,
         wosFile: files.wosFile,
+        outputFormat
       });
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL
-
       setDownloadUrls({
-        csvFile: {
-          csvUrl: `${apiUrl}${csv.downloadUrl}`,
-          csvFileName: csv.fileName
-        },
-        txtFile: {
-          txtUrl: `${apiUrl}${txt.downloadUrl}`,
-          txtFileName: txt.fileName
-        }
+        worksUrl: downloadWorksUrl,
+        removedUrl: downloadRemovedUrl,
+        fileName,
       });
 
       const generatedContainer = document.getElementById("generated");
@@ -145,6 +142,14 @@ export default function SendDownloadView() {
           </footer>
         </FilesToSendHeader>
         <FilesToSend as="form" onSubmit={handleSubmit(handleMergeFiles)}>
+          <div>
+            <input type="radio" onClick={() => {
+              setValue('outputFormat', 'scopus')
+            }} name="outputFormat" />
+            <input type="radio" onClick={() => {
+              setValue('outputFormat', 'wos')
+            }} name="outputFormat"  />
+          </div>
           <FilesToSendContainer>
             <FilesToSendContent>
               <div>
@@ -190,6 +195,8 @@ export default function SendDownloadView() {
               Mesclar Bases de Dados
             </Button>
           </ButtonContainer>
+          <h1>{errors.outputFormat?.message}</h1>
+
         </FilesToSend>
         {downloadUrls !== null && (
           <GeneratedFilesContainer id="generated">
@@ -197,13 +204,13 @@ export default function SendDownloadView() {
             <div>
               <GeneratedFile
                 fileType="csv"
-                downloadUrl={downloadUrls.csvFile.csvUrl!}
-                fileName={downloadUrls.csvFile.csvFileName!}
+                downloadUrl={downloadUrls.worksUrl!}
+                fileName={downloadUrls.fileName!}
               />
               <GeneratedFile
                 fileType="txt"
-                downloadUrl={downloadUrls.txtFile.txtUrl!}
-                fileName={downloadUrls.txtFile.txtFileName!}
+                downloadUrl={downloadUrls.removedUrl!}
+                fileName={`removed_${downloadUrls.fileName!}`}
               />
             </div>
           </GeneratedFilesContainer>
