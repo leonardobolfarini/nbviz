@@ -123,11 +123,13 @@ def merge_same_database(lazyframes: list[pl.LazyFrame]) -> pl.LazyFrame:
 
 def merge_and_process(
     dfs_to_concat: list[pl.DataFrame], subset_cols: list
-) -> pl.DataFrame:
-    df = pl.concat(dfs_to_concat)
+) -> tuple[pl.DataFrame, pl.DataFrame]:
+    df = pl.concat(dfs_to_concat).with_row_index("_row_id")
 
     with_doi = df.filter(pl.col("DOI").is_not_null()).unique(subset=["DOI"])
     without_doi = df.filter(pl.col("DOI").is_null())
-    df = pl.concat([with_doi, without_doi]).unique(subset=subset_cols, keep="first")
 
-    return df
+    df_final = pl.concat([with_doi, without_doi]).unique(subset=subset_cols, keep="first")
+    df_removed = df.join(df_final.select("_row_id"), on="_row_id", how="anti")
+
+    return df_final.drop("_row_id"), df_removed.drop("_row_id")
