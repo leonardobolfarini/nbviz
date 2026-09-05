@@ -1,238 +1,176 @@
 import {
-  AppFunctionsCards,
-  AppFunctionsContainer,
-  DescriptionContainer,
-  HomeContainer,
-  HomeHeader,
-  HowToUseContainer,
-  HowToUseVariants,
-  OurInfos,
-  OurInfosContainer,
-  UsedTechnologies,
-  UsedTechnologiesContainer,
-} from "./styles";
-import { MainLayout } from "../layout";
-import {
-  Code,
-  Database,
-  GithubLogo,
+  ArrowRight,
   BookBookmark,
+  ChartBar,
+  Database,
   Info,
-  Rocket,
-  FileText,
-  LinkedinLogo,
+  Network,
+  Stack,
 } from "@phosphor-icons/react/dist/ssr";
 import Head from "next/head";
-import Image from "next/image";
-
+import Link from "next/link";
+import { MainLayout } from "../layout";
+const features = [
+  [
+    "Mesclagem de Bases",
+    "Combine Scopus, Web of Science e OpenAlex em uma base unificada, removendo duplicatas.",
+    "/mesclagem",
+    Database,
+    "blue",
+  ],
+  [
+    "Fusão de Arquivos",
+    "Una vários arquivos exportados da mesma base quando houver limites de registros por exportação.",
+    "/unificar",
+    Stack,
+    "orange",
+  ],
+  [
+    "Análises Estatísticas",
+    "Gere gráficos de barras e linhas para observar distribuições e tendências das publicações.",
+    "/analises",
+    ChartBar,
+    "green",
+  ],
+  [
+    "Redes de Coautoria",
+    "Visualize conexões entre pesquisadores e identifique padrões de colaboração científica.",
+    "/redes",
+    Network,
+    "purple",
+  ],
+] as const;
+const colors = {
+  blue: "border-blue-100 bg-blue-50 text-blue-600",
+  orange: "border-orange-100 bg-orange-50 text-orange-600",
+  green: "border-green-100 bg-green-50 text-green-600",
+  purple: "border-purple-100 bg-purple-50 text-purple-600",
+};
+const accents = {
+  blue: "bg-blue-500",
+  orange: "bg-orange-500",
+  green: "bg-green-500",
+  purple: "bg-purple-500",
+};
 export default function Home() {
   return (
     <MainLayout>
       <Head>
         <title>NBVIZ | Sobre</title>
-        <meta
-          name="description"
-          content="Home page that gives an overview of the project."
-        />
+        <meta name="description" content="Visão geral do NBVIZ" />
       </Head>
-      <HomeContainer>
-        <HomeHeader>
-          <div>
-            <Info size={28} color="#3b82f6" />
-            <h1>Sobre o Software</h1>
+      <div className="mx-auto flex max-w-7xl flex-col gap-8">
+        <section className="grid gap-8 rounded-xl border border-slate-200 bg-white p-8 shadow-sm lg:grid-cols-[240px_1fr] lg:items-center lg:px-14">
+          <div className="flex justify-center">
+            <div className="rounded-2xl border border-blue-100 bg-blue-50 p-8 text-blue-600">
+              <BookBookmark size={130} weight="duotone" />
+            </div>
           </div>
-          <span>
-            Ferramenta destinada para combinação de dados e análise
-            bibliométrica de dados científicso oriundos das bases de dados Web
-            of Science e Scopus
-          </span>
-        </HomeHeader>
-        <DescriptionContainer>
-          <h2>O que é?</h2>
-          <p>
-            A NB VIZ foi desenvolvida para facilitar a análise de dados
-            bibliométricos provenientes das principais bases de dados
-            científicas (Scopus e Web of Science). Com ela, você pode mesclar
-            bases de dados, visualizar redes de colaboração entre pesquisadores
-            e gerar análises estatísticas detalhadas sobre publicações
-            científicas.
-          </p>
-        </DescriptionContainer>
-        <AppFunctionsContainer>
-          <header>
-            <Rocket size={24} />
-            <h2>Funcionalidades Principais</h2>
-          </header>
-
-          <AppFunctionsCards>
-            <div>
-              <Database size={32} color="#3b82f6" />
-              <h3>Mesclagem de Bases</h3>
-              <p>
-                Combine arquivos do Scopus e Web of Science em uma única base
-                unificada, com remoção automática de duplicatas
-              </p>
-            </div>
-            <div>
-              <Database size={32} color="#22c55e" />
-              <h3>Rede de Coautoria</h3>
-              <p>
-                Visualize grafos interativos das colaborações entre
-                pesquisadores e identifique padrões de cooperação
-              </p>
-            </div>
-            <div>
-              <Database size={32} color="#a855f7" />
-              <h3>Análises Estatísticas</h3>
-              <p>
-                Gere gráficos de barras para distribuições e análises temporais
-                de publicações
-              </p>
-            </div>
-          </AppFunctionsCards>
-        </AppFunctionsContainer>
-        <HowToUseContainer>
-          <h2>Como Usar</h2>
-
-          <HowToUseVariants phase="first">
-            <span>
-              <p>1</p>
-            </span>
-            <div>
-              <h3>Prepare seus dados</h3>
-              <p>
-                Exporte seus dados do Scopus ou Web of Science nos formatos TXT,
-                CSV, XLSX ou XLS
-              </p>
-            </div>
-          </HowToUseVariants>
-
-          <HowToUseVariants phase="second">
-            <span>
-              <p>2</p>
-            </span>
-            <div>
-              <h3>Escolha a funcionalidade</h3>
-              <p>
-                Navegue pelas abas e selecione a análise desejada: mesclagem de
-                arquivos das bases (Scopus + Web of Science), rede coautoria ou
-                estatísticas
-              </p>
-            </div>
-          </HowToUseVariants>
-
-          <HowToUseVariants phase="third">
-            <span>
-              <p>3</p>
-            </span>
-            <div>
-              <h3>Faça upload e analise</h3>
-              <p>
-                Arraste seus arquivos ou clique para selecioná-los e visualize
-                os resultados em tempo real
-              </p>
-            </div>
-          </HowToUseVariants>
-        </HowToUseContainer>
-        <UsedTechnologiesContainer>
-          <header>
-            <Code size={24} weight="bold" />
-            <h2>Desenvolvimento</h2>
-          </header>
-          <UsedTechnologies>
-            <div>
-              <GithubLogo size={20} />
-              <span>
-                <h3>Tecnologias Utilizadas</h3>
-                <p>Next.js, React, TypeScript, Python, Flask</p>
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-blue-600">
+              <Info size={24} />
+              <span className="text-sm font-semibold uppercase tracking-wide">
+                Sobre o software
               </span>
             </div>
-
-            <div>
-              <FileText size={20} />
-              <span>
-                <h3>Formatos Suportados</h3>
-                <p>
-                  TXT, CSV, XLSX, XLS - Compatível com exportações do Scopus e
-                  Web of Science
-                </p>
-              </span>
-            </div>
-
-            <div>
-              <BookBookmark size={20} />
-              <span>
-                <h3>Biblioteca Python</h3>
-                <a
-                  href="https://pypi.org/project/nbviz-scientometric-tools/"
-                  target="_blank"
+            <h1 className="text-4xl font-bold tracking-tight text-slate-800">
+              NBVIZ
+            </h1>
+            <p className="mt-2 text-xl font-semibold text-blue-600">
+              Ferramenta para combinação e análise bibliométrica
+            </p>
+            <h2 className="mt-7 text-xl font-semibold text-slate-800">
+              O que é?
+            </h2>
+            <p className="mt-2 max-w-3xl leading-7 text-slate-600">
+              O NBVIZ é uma solução integrada para combinar bases de dados
+              bibliográficos e gerar análises estatísticas e redes de coautoria,
+              apoiando pesquisas científicas com rigor e eficiência.
+            </p>
+          </div>
+        </section>
+        <section>
+          <h2 className="mb-4 text-2xl font-semibold text-slate-800">
+            Funcionalidades principais
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {features.map(([title, text, href, Icon, color]) => (
+              <Link
+                key={title}
+                href={href}
+                className="group flex min-h-64 flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+              >
+                <div
+                  className={`mb-5 flex h-16 w-16 items-center justify-center rounded-full border ${colors[color]}`}
                 >
-                  Link para o PyPI
-                </a>
-              </span>
-            </div>
-          </UsedTechnologies>
-        </UsedTechnologiesContainer>
-        <OurInfosContainer>
-          <h2>Equipe</h2>
-
-          <div>
-            <Image
-              src="/TeamPhoto.jpeg"
-              width={500}
-              height={500}
-              quality={100}
-              alt="Team Photo"
-              style={{
-                display: "flex",
-                justifySelf: "center",
-                objectFit: "cover",
-              }}
-            />
-            <OurInfos>
-              <div>
-                <h3>Leonardo Neves Bolfarini</h3>
-                <p>Orientando responsável pelo desenvolvimento do projeto</p>
-
-                <div>
-                  <a href="https://github.com/leonardobolfarini">
-                    <span>
-                      <GithubLogo />
-                      Github
-                    </span>
-                  </a>
-                  <a href="https://www.linkedin.com/in/leonardo-bolfarini/">
-                    <span>
-                      <LinkedinLogo />
-                      Linkedin
-                    </span>
-                  </a>
+                  <Icon size={34} weight="duotone" />
                 </div>
-              </div>
-
-              <div>
-                <h3>Rafael Gutierres Castanha</h3>
-                <p>Supervisão acadêmica do projeto</p>
-
-                <div>
-                  <a href="https://github.com/rafaelcastanha">
-                    <span>
-                      <GithubLogo />
-                      Github
-                    </span>
-                  </a>
-                  <a href="https://www.linkedin.com/in/rcastanha/">
-                    <span>
-                      <LinkedinLogo />
-                      Linkedin
-                    </span>
-                  </a>
-                </div>
-              </div>
-            </OurInfos>
+                <h3 className="text-lg font-semibold text-slate-800">
+                  {title}
+                </h3>
+                <div className={`my-3 h-0.5 w-16 ${accents[color]}`} />
+                <p className="text-sm leading-6 text-slate-600">{text}</p>
+                <ArrowRight
+                  className="mt-auto self-end text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-600"
+                  size={24}
+                />
+              </Link>
+            ))}
           </div>
-        </OurInfosContainer>
-      </HomeContainer>
+        </section>
+        <section>
+          <h2 className="mb-4 text-2xl font-semibold text-slate-800">
+            Como usar
+          </h2>
+          <div className="grid gap-4 lg:grid-cols-4">
+            {(
+              [
+                [
+                  "1",
+                  "Mesclagem de bases diferentes",
+                  "Selecione Scopus, Web of Science e/ou OpenAlex. Escolha pelo menos duas fontes.",
+                  "blue",
+                ],
+                [
+                  "2",
+                  "Fusão da mesma base",
+                  "Escolha uma base e adicione quantos arquivos quiser para contornar limites de exportação.",
+                  "orange",
+                ],
+                [
+                  "3",
+                  "Redes de coautoria",
+                  "Envie uma base, configure a rede e explore as conexões entre pesquisadores.",
+                  "purple",
+                ],
+                [
+                  "4",
+                  "Análises estatísticas",
+                  "Visualize gráficos de barras e linhas para analisar suas publicações.",
+                  "green",
+                ],
+              ] as const
+            ).map(([number, title, text, color]) => (
+              <div
+                key={number}
+                className={`rounded-xl border p-5 ${colors[color]}`}
+              >
+                <div className="flex items-start gap-4">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-current bg-white text-lg font-bold">
+                    {number}
+                  </span>
+                  <div>
+                    <h3 className="font-semibold text-slate-800">{title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      {text}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
     </MainLayout>
   );
 }

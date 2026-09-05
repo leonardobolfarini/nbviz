@@ -1,10 +1,11 @@
 import os
-from flask import Blueprint, jsonify, request
-from werkzeug.utils import secure_filename
-import nbviz_scientometric_tools as st
 
+from flask import Blueprint, jsonify, request
 from src.utils.constants import LABEL_MAP
 from src.utils.expections import NotImplementedYet
+from werkzeug.utils import secure_filename
+
+import nbviz_scientometric_tools as st
 
 analytics_bp = Blueprint('analytics', __name__)
 

@@ -1,299 +1,208 @@
-import { z } from "zod";
-import { ChartBarComponent } from "./components/ChartBarComponent";
-import { useMutation } from "@tanstack/react-query";
 import { GetChartBarFormat } from "@/src/api/get-chart-bar-format";
-import { useForm } from "react-hook-form";
+import { exportToCSV } from "@/src/utils/exportFile";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/src/components/Button";
-import { PaperPlaneRight } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
 import {
-  ChartLineViewDisplayContainer,
-  ChartsBarViewDisplayContainer,
-  ChartsContainer,
-  ChartsDisplayContainer,
-  ChartsForm,
-  ChartViewContainer,
-  ChartWithoutData,
-  Header,
-  InputContainer,
-} from "./styles";
-import { ChartBar, ChartLine, Download } from "@phosphor-icons/react/dist/ssr";
+  ChartBar,
+  ChartLine,
+  Download,
+  PaperPlaneRight,
+} from "@phosphor-icons/react/dist/ssr";
+import { useMutation } from "@tanstack/react-query";
+import Head from "next/head";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { MainLayout } from "../layout";
-import { ChartLineComponent } from "./components/ChartLineComponent";
-import { colors } from "@/src/styles/colors";
 import {
   AuthorsCountInterface,
   KeywordsCountInterface,
   SourcesCountInterface,
   YearsCountInterface,
 } from "@/src/lib/types";
-import Head from "next/head";
-import { exportToCSV } from "@/src/utils/exportFile";
-import { LoadingIcon } from "@/src/styles/global";
-import { FileInputInRow } from "@/src/components/FileInputInRow";
-
-const getChartBarFormatFile = z.object({
+import { ChartBarComponent } from "./components/ChartBarComponent";
+import { ChartLineComponent } from "./components/ChartLineComponent";
+const schema = z.object({
   chartBarFile: z
     .any()
     .refine(
-      (files) =>
-        (files instanceof FileList &&
-          files.length > 0 &&
-          files[0].name.endsWith(".csv")) ||
-        files[0].name.endsWith(".txt"),
-      {
-        message: "Selecione um arquivo .csv para Scopus.",
-      },
+      (files) => files instanceof FileList && files.length > 0,
+      "Selecione um arquivo CSV ou TXT.",
     )
     .transform((files) => files[0]),
 });
-
-type GetChartBarFormatFile = z.infer<typeof getChartBarFormatFile>;
-
-export default function Charts() {
-  const [authorsCount, setAuthorsCount] =
-    useState<AuthorsCountInterface | null>(null);
-  const [keywordsCount, setKeywordsCount] =
-    useState<KeywordsCountInterface | null>(null);
-  const [sourcesCount, setSourcesCount] =
-    useState<SourcesCountInterface | null>(null);
-  const [yearsCount, setYearsCount] = useState<YearsCountInterface | null>(
-    null,
+type FormData = z.infer<typeof schema>;
+function DownloadButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-4 flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+    >
+      <Download size={18} /> Baixar dados completos
+    </button>
   );
-
-  const { mutateAsync: getChartBarFormatFn } = useMutation({
-    mutationFn: GetChartBarFormat,
-  });
-
+}
+export default function Charts() {
+  const [authors, setAuthors] = useState<AuthorsCountInterface | null>(null);
+  const [keywords, setKeywords] = useState<KeywordsCountInterface | null>(null);
+  const [sources, setSources] = useState<SourcesCountInterface | null>(null);
+  const [years, setYears] = useState<YearsCountInterface | null>(null);
+  const { mutateAsync } = useMutation({ mutationFn: GetChartBarFormat });
   const {
     register,
     handleSubmit,
-    watch,
-    formState: { errors, isSubmitting: isProcessing },
-  } = useForm<GetChartBarFormatFile>({
-    resolver: zodResolver(getChartBarFormatFile),
-  });
-
-  const chartFileValue = watch("chartBarFile");
-
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({ resolver: zodResolver(schema) });
   useEffect(() => {
-    const chartContainer = document.getElementById("chartContainer");
-
-    chartContainer?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }, [authorsCount, keywordsCount, sourcesCount, yearsCount]);
-
-  async function handleGetChartBarFormat({
-    chartBarFile,
-  }: GetChartBarFormatFile) {
-    const { authors, keywords, sources, years } = await getChartBarFormatFn({
-      chartBarFile,
-    });
-
-    setAuthorsCount(authors);
-    setKeywordsCount(keywords);
-    setSourcesCount(sources);
-    setYearsCount(years);
+    if (authors || keywords || sources || years)
+      document
+        .getElementById("chartContainer")
+        ?.scrollIntoView({ behavior: "smooth" });
+  }, [authors, keywords, sources, years]);
+  async function submit({ chartBarFile }: FormData) {
+    const data = await mutateAsync({ chartBarFile });
+    setAuthors(data.authors);
+    setKeywords(data.keywords);
+    setSources(data.sources);
+    setYears(data.years);
   }
-
+  const chartCards = [
+    [
+      "10 palavras-chave com maior ocorrência",
+      keywords?.keywords || [],
+      "allkeywords",
+      "keyword",
+    ],
+    [
+      "10 autores mais produtivos",
+      authors?.authors || [],
+      "full_authors",
+      "author",
+    ],
+    [
+      "10 fontes mais produtivas",
+      sources?.sources || [],
+      "full_sources",
+      "source",
+    ],
+  ] as const;
   return (
     <MainLayout>
       <Head>
-        <title>NBVIZ | Analises</title>
-        <meta
-          name="description"
-          content="Page where users can upload files to generate statistical charts and temporal analysis."
-        />
+        <title>NBVIZ | Análises</title>
       </Head>
-      <ChartsContainer>
-        <ChartsForm as="form" onSubmit={handleSubmit(handleGetChartBarFormat)}>
-          <Header>
-            <header>
-              <ChartBar size={32} />
-              <h1>Análises Estatísticas Completas</h1>
-            </header>
-            <footer>
-              Faça upload de um arquivo para gerar gráficos de barras e análise
-              temporal
-            </footer>
-          </Header>
-          <InputContainer>
-            <FileInputInRow
-              idhtml="chartBarFile"
-              accept=".csv, .txt"
-              value={chartFileValue}
-              {...register("chartBarFile")}
-            />
-            <span>
-              {errors.chartBarFile ? String(errors.chartBarFile.message) : ""}
-            </span>
-          </InputContainer>
-          <Button
-            colorButton="black"
-            style={{ marginTop: "1rem", marginLeft: "auto" }}
-            disabled={isProcessing}
-            type="submit"
-          >
-            Analisar
-            {isProcessing ? (
-              <LoadingIcon />
-            ) : (
-              <PaperPlaneRight weight="bold" height={20} width={20} />
-            )}
-          </Button>
-        </ChartsForm>
-        <ChartsDisplayContainer>
-          <Header>
-            <header>
-              <ChartBar size={32} />
-              <h1>Gráficos de Distribuição</h1>
-            </header>
-            <footer>Análise quantitativa por categorias</footer>
-          </Header>
-          {keywordsCount || authorsCount || sourcesCount ? (
-            <ChartsBarViewDisplayContainer id="chartContainer">
-              <ChartViewContainer>
-                <ChartBarComponent
-                  dataListName="10 palavras-chaves com maior ocorrência"
-                  chartBarData={
-                    keywordsCount?.keywords
-                      ?.sort((a, b) => b.count - a.count)
-                      .slice(0, 10)
-                      .map((keyword) => ({
-                        name: keyword.label,
-                        count: keyword.count,
-                      })) || []
-                  }
-                />
-                {keywordsCount!.keywords.length > 0 && (
-                  <Button
-                    onClick={() =>
-                      exportToCSV(
-                        keywordsCount?.keywords || [],
-                        "allkeywords",
-                        "keyword",
-                      )
-                    }
-                  >
-                    <Download size={20} />
-                    Baixar dados completos
-                  </Button>
-                )}
-              </ChartViewContainer>
-              <ChartViewContainer>
-                <ChartBarComponent
-                  dataListName="10 autores mais produtivos"
-                  chartBarData={
-                    authorsCount?.authors
-                      ?.sort((a, b) => b.count - a.count)
-                      .slice(0, 10)
-                      .map((author) => ({
-                        name: author.label,
-                        count: author.count,
-                      })) || []
-                  }
-                />
-                {authorsCount!.authors.length > 0 && (
-                  <Button
-                    onClick={() =>
-                      exportToCSV(
-                        authorsCount?.authors || [],
-                        "full_authors",
-                        "author",
-                      )
-                    }
-                  >
-                    <Download size={20} />
-                    Baixar dados completos
-                  </Button>
-                )}
-              </ChartViewContainer>
-              <ChartViewContainer>
-                <ChartBarComponent
-                  dataListName="10 fontes mais produtivas"
-                  chartBarData={
-                    sourcesCount?.sources
-                      ?.sort((a, b) => b.count - a.count)
-                      .slice(0, 10)
-                      .map((source) => ({
-                        name: source.label,
-                        count: source.count,
-                      })) || []
-                  }
-                />
-                {sourcesCount!.sources.length > 0 && (
-                  <Button
-                    onClick={() =>
-                      exportToCSV(
-                        sourcesCount?.sources || [],
-                        "full_sources",
-                        "source",
-                      )
-                    }
-                  >
-                    <Download size={20} />
-                    Baixar dados completos
-                  </Button>
-                )}
-              </ChartViewContainer>
-            </ChartsBarViewDisplayContainer>
-          ) : (
-            <ChartViewContainer>
-              <ChartWithoutData>
-                <ChartBar size={50} color={colors.slate400} />
-                <span>Gráficos de barra aparecerão aqui</span>
-              </ChartWithoutData>
-            </ChartViewContainer>
+      <div className="mx-auto max-w-7xl space-y-6">
+        <form
+          onSubmit={handleSubmit(submit)}
+          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+        >
+          <div className="flex items-center gap-3">
+            <ChartBar size={30} className="text-blue-600" />
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">
+                Análises estatísticas
+              </h1>
+              <p className="text-sm text-slate-500">
+                Envie uma base para gerar gráficos de distribuição e evolução
+                temporal.
+              </p>
+            </div>
+          </div>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <label className="flex flex-1 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-blue-300 bg-blue-50/40 px-5 py-4 text-sm font-medium text-slate-700">
+              Clique para selecionar CSV ou TXT
+              <input
+                className="hidden"
+                type="file"
+                accept=".csv,.txt"
+                {...register("chartBarFile")}
+              />
+            </label>
+            <button
+              disabled={isSubmitting}
+              className="flex items-center justify-center gap-2 rounded-lg bg-black px-6 py-4 font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+            >
+              {isSubmitting ? "Processando..." : "Analisar"}
+              <PaperPlaneRight size={20} />
+            </button>
+          </div>
+          {errors.chartBarFile && (
+            <p className="mt-2 text-sm text-red-600">
+              {String(errors.chartBarFile.message)}
+            </p>
           )}
-        </ChartsDisplayContainer>
-        <ChartsDisplayContainer>
-          <Header>
-            <header>
-              <ChartLine size={32} />
-              <h1>Evolução Temporal</h1>
-            </header>
-            <footer>Tendências e padrões ao longo do tempo</footer>
-          </Header>
-          {yearsCount ? (
-            <ChartLineViewDisplayContainer>
-              <ChartViewContainer>
+        </form>
+        <section className="rounded-xl border border-slate-200 bg-slate-100 p-4 sm:p-6">
+          <div className="mb-5">
+            <h2 className="flex items-center gap-2 text-xl font-semibold text-slate-800">
+              <ChartBar className="text-blue-600" /> Gráficos de distribuição
+            </h2>
+            <p className="text-sm text-slate-500">
+              Análise quantitativa por categorias
+            </p>
+          </div>
+          <div id="chartContainer" className="grid gap-4 lg:grid-cols-3">
+            {chartCards.map(([title, data, filename, field]) => (
+              <div
+                key={title}
+                className="rounded-lg border border-slate-200 bg-white p-4"
+              >
+                <ChartBarComponent
+                  dataListName={title}
+                  chartBarData={[...data]
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 10)
+                    .map((item) => ({ name: item.label, count: item.count }))}
+                />
+                {data.length > 0 && (
+                  <DownloadButton
+                    onClick={() => exportToCSV(data, filename, field)}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="rounded-xl border border-slate-200 bg-slate-100 p-4 sm:p-6">
+          <div className="mb-5">
+            <h2 className="flex items-center gap-2 text-xl font-semibold text-slate-800">
+              <ChartLine className="text-purple-600" /> Evolução temporal
+            </h2>
+            <p className="text-sm text-slate-500">
+              Tendências e padrões ao longo do tempo
+            </p>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            {years ? (
+              <>
                 <ChartLineComponent
                   dataListName="Últimos 10 anos"
-                  chartBarData={
-                    yearsCount?.years
-                      ?.sort((a, b) => Number(b.label) - Number(a.label))
-                      .slice(0, 10)
-                      .sort((a, b) => Number(a.label) - Number(b.label))
-                      .map((source) => ({
-                        name: String(Math.trunc(Number(source.label))),
-                        count: source.count,
-                      })) || []
-                  }
+                  chartBarData={[...years.years]
+                    .sort((a, b) => Number(a.label) - Number(b.label))
+                    .slice(-10)
+                    .map((item) => ({
+                      name: String(item.label),
+                      count: item.count,
+                    }))}
                 />
-                <Button
-                  onClick={() =>
-                    exportToCSV(yearsCount.years || [], "full_years", "year")
-                  }
-                >
-                  <Download size={20} />
-                  Baixar dados completos
-                </Button>
-              </ChartViewContainer>
-            </ChartLineViewDisplayContainer>
-          ) : (
-            <ChartViewContainer>
-              <ChartWithoutData>
-                <ChartLine size={50} color={colors.slate400} />
-                <h2>Gráfico de Linha Temporal</h2>
-                <span>Dados de evolução temporal serão exibidos aqui</span>
-              </ChartWithoutData>
-            </ChartViewContainer>
-          )}
-        </ChartsDisplayContainer>
-      </ChartsContainer>
+                <DownloadButton
+                  onClick={() => exportToCSV(years.years, "full_years", "year")}
+                />
+              </>
+            ) : (
+              <div className="flex h-80 flex-col items-center justify-center gap-3 text-center text-slate-400">
+                <ChartLine size={54} />
+                <h3 className="text-lg font-medium">
+                  Gráfico de linha temporal
+                </h3>
+                <p className="text-sm">
+                  Os dados de evolução temporal aparecerão aqui.
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
     </MainLayout>
   );
 }

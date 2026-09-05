@@ -1,29 +1,29 @@
 export interface GetChartBarFormatProps {
-  chartBarFile: File
+  chartBarFile: File;
 }
 
 export interface ChartBarData {
-  name: string
-  count: number
+  name: string;
+  count: number;
 }
 
 export interface ChartCountInterface {
-  label: string
-  count: number
+  label: string;
+  count: number;
 }
 
 export interface AuthorsCountInterface {
-  authors: ChartCountInterface[]
+  authors: ChartCountInterface[];
 }
 
 export interface KeywordsCountInterface {
-  keywords: ChartCountInterface[]
+  keywords: ChartCountInterface[];
 }
 
 export interface SourcesCountInterface {
-  sources: ChartCountInterface[]
+  sources: ChartCountInterface[];
 }
 
 export interface YearsCountInterface {
-  years: ChartCountInterface[]
+  years: ChartCountInterface[];
 }
