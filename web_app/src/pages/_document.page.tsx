@@ -1,5 +1,4 @@
-import { getCssText } from '../styles/stitches'
-import { Head, Html, Main, NextScript } from 'next/document'
+import { Head, Html, Main, NextScript } from "next/document";
 
 export default function Document() {
   return (
@@ -17,22 +16,12 @@ export default function Document() {
           rel="stylesheet"
         />
 
-        <link
-          rel="icon"
-          type="image/x-icon"
-          href="/favicon.png"
-        />
-
-        <style
-          id="stitches"
-          dangerouslySetInnerHTML={{ __html: getCssText() }}
-        />
-
+        <link rel="icon" type="image/x-icon" href="/favicon.png" />
       </Head>
       <body>
         <Main />
         <NextScript />
       </body>
     </Html>
-  )
+  );
 }
