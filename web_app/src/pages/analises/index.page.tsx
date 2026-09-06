@@ -51,8 +51,11 @@ export default function Charts() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
+
+  const chartFile = watch("chartBarFile");
   useEffect(() => {
     if (authors || keywords || sources || years)
       document
@@ -86,6 +89,8 @@ export default function Charts() {
       "source",
     ],
   ] as const;
+
+  const hasResults = Boolean(authors || keywords || sources || years);
   return (
     <MainLayout>
       <Head>
@@ -110,7 +115,9 @@ export default function Charts() {
           </div>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <label className="flex flex-1 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-blue-300 bg-blue-50/40 px-5 py-4 text-sm font-medium text-slate-700">
-              Clique para selecionar CSV ou TXT
+              {chartFile?.[0]
+                ? chartFile[0].name
+                : "Clique para selecionar CSV ou TXT"}
               <input
                 className="hidden"
                 type="file"
@@ -132,6 +139,8 @@ export default function Charts() {
             </p>
           )}
         </form>
+        {hasResults ? (
+          <>
         <section className="rounded-xl border border-slate-200 bg-slate-100 p-4 sm:p-6">
           <div className="mb-5">
             <h2 className="flex items-center gap-2 text-xl font-semibold text-slate-800">
@@ -141,7 +150,7 @@ export default function Charts() {
               Análise quantitativa por categorias
             </p>
           </div>
-          <div id="chartContainer" className="grid gap-4 lg:grid-cols-3">
+          <div id="chartContainer" className="grid gap-4">
             {chartCards.map(([title, data, filename, field]) => (
               <div
                 key={title}
@@ -202,6 +211,19 @@ export default function Charts() {
             )}
           </div>
         </section>
+          </>
+        ) : (
+          <section className="flex min-h-80 flex-col items-center justify-center rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <ChartBar size={56} className="text-blue-200" />
+            <h2 className="mt-4 text-xl font-semibold text-slate-700">
+              Seus gráficos aparecerão aqui
+            </h2>
+            <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
+              Selecione uma base bibliográfica acima e clique em “Analisar”
+              para gerar as distribuições e a evolução temporal.
+            </p>
+          </section>
+        )}
       </div>
     </MainLayout>
   );
