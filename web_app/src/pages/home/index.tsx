@@ -3,8 +3,10 @@ import {
   BookBookmark,
   ChartBar,
   Database,
+  GithubLogo,
   Info,
   Network,
+  Package,
   Stack,
 } from "@phosphor-icons/react/dist/ssr";
 import Head from "next/head";
@@ -168,6 +170,57 @@ export default function Home() {
                 </div>
               </div>
             ))}
+          </div>
+        </section>
+        <section>
+          <h2 className="mb-4 text-2xl font-semibold text-slate-800">
+            Projeto e biblioteca
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <a
+              href="https://pypi.org/project/nbviz-scientometric-tools/"
+              target="_blank"
+              rel="noreferrer"
+              className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-blue-100 bg-blue-50 text-blue-600">
+                <Package size={30} weight="duotone" />
+              </span>
+              <span>
+                <span className="block text-lg font-semibold text-slate-800">
+                  Biblioteca Python
+                </span>
+                <span className="mt-1 block text-sm leading-6 text-slate-600">
+                  Instale e use o nbviz-scientometric-tools diretamente nos seus
+                  projetos.
+                </span>
+                <span className="mt-3 block text-sm font-semibold text-blue-600 group-hover:underline">
+                  Ver no PyPI →
+                </span>
+              </span>
+            </a>
+            <a
+              href="https://github.com/leonardobolfarini/nbviz"
+              target="_blank"
+              rel="noreferrer"
+              className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-700">
+                <GithubLogo size={30} weight="duotone" />
+              </span>
+              <span>
+                <span className="block text-lg font-semibold text-slate-800">
+                  Código-fonte
+                </span>
+                <span className="mt-1 block text-sm leading-6 text-slate-600">
+                  Consulte o repositório, acompanhe o desenvolvimento e
+                  contribua com o projeto.
+                </span>
+                <span className="mt-3 block text-sm font-semibold text-slate-700 group-hover:underline">
+                  Ver no GitHub →
+                </span>
+              </span>
+            </a>
           </div>
         </section>
       </div>
