@@ -126,7 +126,9 @@ export default function Graph() {
             )}
             <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-blue-300 bg-blue-50/40 p-8 text-center">
               <span className="font-medium text-slate-700">
-                Clique para selecionar um arquivo CSV ou TXT
+                {graphFileValue?.[0]
+                  ? graphFileValue[0].name
+                  : "Clique para selecionar um arquivo CSV ou TXT"}
               </span>
               <span className="mt-1 text-sm text-slate-500">
                 Arquivo para criar a rede

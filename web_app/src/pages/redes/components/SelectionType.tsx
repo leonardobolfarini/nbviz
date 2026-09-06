@@ -1,5 +1,6 @@
 import { IconProps } from "@phosphor-icons/react";
-interface SelectionTypeProps extends React.HTMLAttributes<HTMLDivElement> {
+interface SelectionTypeProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
   icon: React.ComponentType<IconProps>;
   isActive: boolean;
