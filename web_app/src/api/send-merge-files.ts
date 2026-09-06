@@ -5,13 +5,15 @@ interface MergeFilesProps {
   wosFile?: File;
   searchTerm?: string;
   limit?: number;
-  outputFormat: "scopus" | "wos";
+  outputFormat: "scopus" | "wos" | "openalex";
 }
 
 export async function MergeFiles({
   scopusFile,
   wosFile,
   outputFormat,
+  limit,
+  searchTerm,
 }: MergeFilesProps) {
   const formData = new FormData();
   if (scopusFile) formData.append("scopusFile", scopusFile);
