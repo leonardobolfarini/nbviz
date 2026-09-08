@@ -14,7 +14,6 @@ import {
 import { SigmaRender } from "./components/SigmaRender";
 import { MainLayout } from "../layout";
 import Head from "next/head";
-import { exportToPajek } from "@/src/utils/exportFile";
 import { GraphEdgesFormat, GraphNodesFormat } from "../types";
 import { SelectionType } from "./components/SelectionType";
 const getGraphFormatFile = z.object({
@@ -35,9 +34,16 @@ const getGraphFormatFile = z.object({
     .transform((files) => files[0]),
 });
 type GetGraphFormatFile = z.infer<typeof getGraphFormatFile>;
+type GraphMeta = {
+  original: { nodes: number; edges: number };
+  displayed: { nodes: number; edges: number };
+  simplified: boolean;
+};
 export default function Graph() {
   const [nodes, setNodes] = useState<GraphNodesFormat[] | null>(null);
   const [edges, setEdges] = useState<GraphEdgesFormat[] | null>(null);
+  const [graphMeta, setGraphMeta] = useState<GraphMeta | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [isFullSize, setIsFullSize] = useState<boolean>(false);
   const { mutateAsync: GetGraphFormatFn } = useMutation({
     mutationFn: GetGraphFormat,
@@ -75,6 +81,8 @@ export default function Graph() {
     });
     setNodes(response.nodes);
     setEdges(response.edges);
+    setGraphMeta(response.meta ?? null);
+    setDownloadUrl(response.download_url ?? null);
   }
   return (
     <MainLayout>
@@ -184,21 +192,27 @@ export default function Graph() {
                 </>
               )}
             </header>
-            {edges && nodes && (
+            {edges && nodes && downloadUrl && (
               <span>
-                <button
-                  type="button"
+                <a
+                  href={`${process.env.NEXT_PUBLIC_API_URL}${downloadUrl}`}
                   className="flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-white"
-                  onClick={() =>
-                    exportToPajek({ edges, nodes }, "rede_colaboracao")
-                  }
                 >
                   <Download size={20} />
                   Exportar Grafo (.net)
-                </button>
+                </a>
               </span>
             )}
           </div>
+          {graphMeta?.simplified && (
+            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              Visualização otimizada: mostrando{" "}
+              {graphMeta.displayed.nodes.toLocaleString("pt-BR")} nós e{" "}
+              {graphMeta.displayed.edges.toLocaleString("pt-BR")} conexões mais
+              relevantes de {graphMeta.original.nodes.toLocaleString("pt-BR")}{" "}
+              nós e {graphMeta.original.edges.toLocaleString("pt-BR")} conexões.
+            </p>
+          )}
           <div className="relative min-h-[420px] rounded-lg border border-slate-200 bg-white">
             {!edges || !nodes ? (
               <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 p-8 text-center">

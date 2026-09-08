@@ -1,8 +1,7 @@
 import Graph from "graphology";
 import { useEffect, useRef, useState } from "react";
-import { Sigma } from "sigma";
-import FA2Layout from "graphology-layout-forceatlas2/worker";
-import forceAtlas2 from "graphology-layout-forceatlas2";
+import type { Sigma } from "sigma";
+import type FA2Layout from "graphology-layout-forceatlas2/worker";
 import { GraphEdgesFormat, GraphNodesFormat } from "@/src/pages/types";
 
 interface SigmaRenderProps {
@@ -11,238 +10,129 @@ interface SigmaRenderProps {
   isFullSize: boolean;
 }
 
+const FORCE_ATLAS_NODE_LIMIT = 2_500;
+const FORCE_ATLAS_EDGE_LIMIT = 8_000;
+
+function initialPosition(index: number, total: number) {
+  const angle = index * 2.39;
+  const radius = Math.sqrt(index / Math.max(total, 1));
+  return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
+}
+
 export function SigmaRender({
   graphEdges,
   graphNodes,
   isFullSize,
 }: SigmaRenderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const sigmaInstanceRef = useRef<Sigma | null>(null);
+  const sigmaRef = useRef<Sigma | null>(null);
   const layoutRef = useRef<FA2Layout | null>(null);
-
   const [isLoading, setIsLoading] = useState(true);
-
-  const containerHeight = isFullSize ? "100vh" : "400px";
+  const canUseForceAtlas =
+    graphNodes.length <= FORCE_ATLAS_NODE_LIMIT &&
+    graphEdges.length <= FORCE_ATLAS_EDGE_LIMIT;
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !containerRef.current) return;
 
+    let cancelled = false;
+    let stopTimer: ReturnType<typeof setTimeout> | undefined;
+    let renderer: Sigma | null = null;
     setIsLoading(true);
 
-    let timeoutId: NodeJS.Timeout;
+    const initialize = async () => {
+      const [sigmaModule, layoutModule, forceAtlasModule] = await Promise.all([
+        import("sigma"),
+        import("graphology-layout-forceatlas2/worker"),
+        import("graphology-layout-forceatlas2"),
+      ]);
+      if (cancelled || !containerRef.current) return;
 
-    const initSigma = async () => {
-      const { Sigma } = await import("sigma");
-      const graph = new Graph();
-
-      graphNodes.forEach((node) => {
-        graph.addNode(node.data.id, {
+      const graph = new Graph({ multi: true, allowSelfLoops: false });
+      const ids = new Set<string>();
+      graphNodes.forEach((node, index) => {
+        const id = String(node.data.id);
+        if (ids.has(id)) return;
+        ids.add(id);
+        graph.addNode(id, {
           label: node.data.label,
-          x: Math.random() * 3000,
-          y: Math.random() * 3000,
+          ...initialPosition(index, graphNodes.length),
           size: 3,
-          color: "#999",
+          color: "#64748b",
         });
       });
-
       graphEdges.forEach((edge) => {
-        graph.addEdge(edge.data.source, edge.data.target, {
-          color: "#ccc",
-          size: 2,
+        const source = String(edge.data.source);
+        const target = String(edge.data.target);
+        if (!ids.has(source) || !ids.has(target) || source === target) return;
+        graph.addEdge(source, target, {
+          color: "#cbd5e1",
+          size: 1,
           weight: edge.data.weight,
-          label: "",
-          originalLabel: String(edge.data.weight),
         });
       });
 
-      const sensibleSettings = forceAtlas2.inferSettings(graph);
-      const fa2Layout = new FA2Layout(graph, {
+      renderer = new sigmaModule.Sigma(graph, containerRef.current, {
+        allowInvalidContainer: true,
+        renderLabels: graph.order <= 600,
+        renderEdgeLabels: false,
+        enableEdgeEvents: false,
+        hideEdgesOnMove: graph.size > 3_000,
+        hideLabelsOnMove: true,
+        labelRenderedSizeThreshold: 9,
+        zIndex: false,
+      });
+      sigmaRef.current = renderer;
+      setIsLoading(false);
+
+      if (!canUseForceAtlas || graph.order < 2 || graph.size === 0) return;
+
+      const layout = new layoutModule.default(graph, {
         settings: {
-          gravity: 1,
-          ...sensibleSettings,
+          ...forceAtlasModule.default.inferSettings(graph),
           barnesHutOptimize: true,
-          barnesHutTheta: 0.5,
+          barnesHutTheta: 0.8,
+          gravity: 1,
+          slowDown: Math.max(2, Math.sqrt(graph.order) / 3),
         },
       });
-
-      layoutRef.current = fa2Layout;
-
-      fa2Layout.start();
-
-      timeoutId = setTimeout(() => {
-        fa2Layout.stop();
-
-        setIsLoading(false);
-
-        if (containerRef.current && !sigmaInstanceRef.current) {
-          const sigma = new Sigma(graph, containerRef.current, {
-            allowInvalidContainer: true,
-            renderEdgeLabels: true,
-            edgeLabelSize: 18,
-            edgeLabelColor: { color: "#000" },
-
-            enableEdgeEvents: true,
-
-            labelRenderedSizeThreshold: 0,
-          });
-
-          let hoveredNode: string | null = null;
-
-          sigma.on("enterNode", ({ node }) => {
-            const neighbors = graph.neighbors(node);
-            hoveredNode = node;
-
-            graph.forEachNode((n) => {
-              const isNeighbor = neighbors.includes(n) || n === hoveredNode;
-              if (isNeighbor) {
-                graph.setNodeAttribute(n, "color", "#E41A1C");
-                graph.setNodeAttribute(n, "size", 5);
-              } else {
-                graph.setNodeAttribute(n, "color", "#999");
-                graph.setNodeAttribute(n, "size", 3);
-              }
-            });
-
-            graph.forEachEdge((edge) => {
-              const isConnected = graph.hasExtremity(edge, node);
-
-              if (isConnected) {
-                graph.setEdgeAttribute(edge, "color", "#E41A1C");
-                graph.setEdgeAttribute(
-                  edge,
-                  "label",
-                  graph.getEdgeAttribute(edge, "originalLabel"),
-                );
-                graph.setEdgeAttribute(edge, "size", 4);
-                graph.setEdgeAttribute(edge, "zIndex", 1);
-              } else {
-                graph.setEdgeAttribute(edge, "color", "#ccc");
-                graph.setEdgeAttribute(edge, "label", "");
-                graph.setEdgeAttribute(edge, "size", 2);
-                graph.setEdgeAttribute(edge, "zIndex", 0);
-              }
-            });
-          });
-
-          sigma.on("leaveNode", () => {
-            graph.forEachNode((node) => {
-              graph.setNodeAttribute(node, "color", "#999");
-              graph.setNodeAttribute(node, "size", 3);
-            });
-            graph.forEachEdge((edge) => {
-              graph.setEdgeAttribute(edge, "color", "#ccc");
-              graph.setEdgeAttribute(edge, "label", "");
-              graph.setEdgeAttribute(edge, "size", 2);
-              graph.setEdgeAttribute(edge, "zIndex", 0);
-            });
-          });
-
-          sigma.on("enterEdge", ({ edge }) => {
-            graph.forEachNode((node) => {
-              const isConnected = graph.hasExtremity(edge, node);
-
-              if (isConnected) {
-                graph.setNodeAttribute(node, "color", "#E41A1C");
-                graph.setNodeAttribute(node, "size", 5);
-              } else {
-                graph.setNodeAttribute(node, "color", "#999");
-                graph.setNodeAttribute(node, "size", 3);
-              }
-            });
-
-            graph.setEdgeAttribute(edge, "color", "#E41A1C");
-            graph.setEdgeAttribute(
-              edge,
-              "label",
-              graph.getEdgeAttribute(edge, "originalLabel"),
-            );
-            graph.setEdgeAttribute(edge, "size", 4);
-            graph.setEdgeAttribute(edge, "zIndex", 1);
-          });
-
-          sigma.on("leaveEdge", ({ edge }) => {
-            graph.setEdgeAttribute(edge, "color", "#ccc");
-            graph.setEdgeAttribute(edge, "label", "");
-            graph.setEdgeAttribute(edge, "size", 2);
-            graph.setEdgeAttribute(edge, "zIndex", 0);
-
-            graph.forEachNode((node) => {
-              graph.setNodeAttribute(node, "color", "#999");
-              graph.setNodeAttribute(node, "size", 3);
-            });
-          });
-
-          sigmaInstanceRef.current = sigma;
-          sigma.refresh();
-        }
-      }, 10000);
+      layoutRef.current = layout;
+      layout.start();
+      stopTimer = setTimeout(
+        () => layout.stop(),
+        graph.order > 1_000 ? 900 : 2_000,
+      );
     };
-
-    initSigma();
+    void initialize();
 
     return () => {
-      clearTimeout(timeoutId);
-      if (layoutRef.current) {
-        layoutRef.current.kill();
-      }
-      if (sigmaInstanceRef.current) {
-        sigmaInstanceRef.current.kill();
-        sigmaInstanceRef.current = null;
-      }
+      cancelled = true;
+      if (stopTimer) clearTimeout(stopTimer);
+      layoutRef.current?.kill();
+      layoutRef.current = null;
+      renderer?.kill();
+      sigmaRef.current = null;
     };
-  }, [graphNodes, graphEdges]);
+  }, [graphEdges, graphNodes, canUseForceAtlas]);
 
   useEffect(() => {
-    if (sigmaInstanceRef.current && !isLoading) {
-      requestAnimationFrame(() => {
-        sigmaInstanceRef.current?.resize();
-        sigmaInstanceRef.current?.refresh();
-      });
-    }
+    if (!isLoading) requestAnimationFrame(() => sigmaRef.current?.resize());
   }, [isFullSize, isLoading]);
 
   return (
     <div
-      style={{ position: "relative", width: "100%", height: containerHeight }}
+      style={{
+        position: "relative",
+        width: "100%",
+        height: isFullSize ? "100vh" : "400px",
+      }}
     >
       {isLoading && (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            backgroundColor: "#f5f5f5",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 10,
-            color: "#666",
-            fontFamily: "sans-serif",
-          }}
-        >
-          <div
-            style={{
-              width: "40px",
-              height: "40px",
-              border: "4px solid #ddd",
-              borderTop: "4px solid #333",
-              borderRadius: "50%",
-              animation: "spin 1s linear infinite",
-              marginBottom: "16px",
-            }}
-          >
-            <style>
-              {`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}
-            </style>
-          </div>
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-50 text-slate-500">
+          Preparando a visualização…
         </div>
       )}
-
       <div
-        id="sigmaContainer"
         ref={containerRef}
         style={{
           width: "100%",
