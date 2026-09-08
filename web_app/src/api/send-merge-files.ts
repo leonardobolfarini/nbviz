@@ -29,14 +29,15 @@ export async function MergeFiles({
       },
     });
 
-    if (!response.data?.download_works_url) {
+    if (!response.data?.files) {
       throw new Error("A resposta do servidor está vazia ou inválida.");
     }
 
     return {
-      downloadWorksUrl: response.data.download_works_url,
-      downloadRemovedUrl: response.data.download_removed_url,
-      fileName: response.data?.file_name,
+      downloadWorksUrl: response.data.files.download_works_url,
+      downloadRemovedUrl: response.data.files.download_removed_url,
+      fileName: response.data.files.file_name,
+      venn: response.data.venn,
     };
   } catch (error: any) {
     if (error.response) {

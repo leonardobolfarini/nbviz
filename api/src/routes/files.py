@@ -15,7 +15,8 @@ from src.utils.expections import OutputFormatNotPassed
 import nbviz_scientometric_tools as st
 
 load_dotenv()
-files_bp = Blueprint('files', __name__)
+files_bp = Blueprint("files", __name__)
+
 
 @files_bp.route("/download/<file_name>", methods=["GET"])
 def download_file(file_name):
@@ -31,7 +32,9 @@ def download_file(file_name):
 @files_bp.route("/unify_files", methods=["POST"])
 def merge_same_base_files():
     if "files" not in request.files:
-        return jsonify({"message": "O parâmetro 'files' é requerido no corpo da requisição."}), 400
+        return jsonify(
+            {"message": "O parâmetro 'files' é requerido no corpo da requisição."}
+        ), 400
 
     files = request.files.getlist("files")
     database = request.form.get("databaseType")
@@ -52,10 +55,13 @@ def merge_same_base_files():
     concat = st.merge_same_database(lazyframes)
     concat.sink_csv(output, **configs)
 
-    return jsonify({
-        "download_url": f"/download/{file_name}",
-        "file_name": file_name,
-    })
+    return jsonify(
+        {
+            "download_url": f"/download/{file_name}",
+            "file_name": file_name,
+        }
+    )
+
 
 @files_bp.route("/process", methods=["POST"])
 def process_files():
@@ -69,7 +75,9 @@ def process_files():
     dfs_to_concat = []
 
     if not output_format:
-        raise OutputFormatNotPassed('The property "outputFormat" is required to generate the output.')
+        raise OutputFormatNotPassed(
+            'The property "outputFormat" is required to generate the output.'
+        )
 
     if scopus_file:
         scopus_df = st.read_scopus_file(scopus_file.read())
@@ -84,31 +92,34 @@ def process_files():
         processed_wos_df = processed_wos_df.rename(WOS_TO_SCOPUS)
         dfs_to_concat.append(processed_wos_df)
 
-
     if openalex_search:
-        processed_oa_df = st.fetch_openalex_works(openalex_search, openalex_key, limit=limit)
+        processed_oa_df = st.fetch_openalex_works(
+            openalex_search, openalex_key, limit=limit
+        )
         processed_oa_df = processed_oa_df.rename(OPENALEX_TO_SCOPUS)
         dfs_to_concat.append(processed_oa_df)
 
     if len(dfs_to_concat) <= 1:
-        return jsonify({
-            "message": "Is required two or more databases to realize the concatenation."
-        }), 400
+        return jsonify(
+            {
+                "message": "Is required two or more databases to realize the concatenation."
+            }
+        ), 400
 
-    if output_format == 'scopus' or output_format == 'openalex':
+    if output_format == "scopus" or output_format == "openalex":
         configs = {
-            'separator': ",",
-            'quote_char': '"',
-            'quote_style': "always",
+            "separator": ",",
+            "quote_char": '"',
+            "quote_style": "always",
         }
-    elif output_format == 'wos':
-        configs = {
-            'separator': "\t"
-        }
+    elif output_format == "wos":
+        configs = {"separator": "\t"}
     else:
         configs = {}
 
-    output_extension = 'csv' if output_format == 'scopus' or output_format == 'openalex' else 'txt'
+    output_extension = (
+        "csv" if output_format == "scopus" or output_format == "openalex" else "txt"
+    )
     requisition_id = str(uuid.uuid4())
 
     output_name = f"all_in_one_{requisition_id}.{output_extension}"
@@ -117,7 +128,7 @@ def process_files():
     output_removed_works = os.path.join(OUTPUT_FOLDER, output_removed)
 
     try:
-        merged_data, removed_merged_data = st.merge_and_process(
+        merged_data, removed_merged_data, venn_df = st.merge_and_process(
             dfs_to_concat,
             ["Title", "Year"],
         )
@@ -125,11 +136,16 @@ def process_files():
         merged_data.write_csv(output_works, **configs)
         removed_merged_data.write_csv(output_removed_works, **configs)
 
-        return jsonify({
-            'download_works_url': f'/download/{output_name}',
-            'download_removed_url': f'/download/{output_removed}',
-            'file_name': output_name
-        })
+        return jsonify(
+            {
+                "files": {
+                    "download_works_url": f"/download/{output_name}",
+                    "download_removed_url": f"/download/{output_removed}",
+                    "file_name": output_name,
+                },
+                "venn": venn_df.to_dicts(),
+            }
+        )
 
     except Exception as e:
-        return jsonify({ "message": f"Error trying to concat the files: {str(e)}" }), 500
+        return jsonify({"message": f"Error trying to concat the files: {str(e)}"}), 500

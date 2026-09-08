@@ -2,7 +2,6 @@ import { MergeFiles } from "@/src/api/send-merge-files";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowRight,
-  Check,
   Database,
   MagnifyingGlass,
   UploadSimple,
@@ -15,6 +14,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { MainLayout } from "../layout";
 import { GeneratedFile } from "./components/GeneratedFile";
+import { InputCard } from "./components/InputCard";
+import { VennSection, type VennRow } from "./components/VennSection";
+
 const schema = z.object({
   scopusFile: z.any().optional(),
   wosFile: z.any().optional(),
@@ -23,6 +25,7 @@ const schema = z.object({
   outputFormat: z.enum(["scopus", "wos", "openalex"]),
 });
 type FormData = z.infer<typeof schema>;
+
 export default function MergePage() {
   const [selected, setSelected] = useState({
     scopus: true,
@@ -33,31 +36,35 @@ export default function MergePage() {
     worksUrl: string;
     removedUrl: string;
     fileName: string;
+    venn: VennRow[];
   } | null>(null);
   const {
     register,
     handleSubmit,
     watch,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { outputFormat: "scopus" },
   });
+
   const { mutateAsync } = useMutation({ mutationFn: MergeFiles });
   const scopus = watch("scopusFile");
   const wos = watch("wosFile");
+  const count = Object.values(selected).filter(Boolean).length;
+
   const toggle = (key: keyof typeof selected) =>
     setSelected((old) => ({ ...old, [key]: !old[key] }));
-  const count = Object.values(selected).filter(Boolean).length;
   useEffect(() => {
     if (downloads)
       document
         .getElementById("generated")
         ?.scrollIntoView({ behavior: "smooth" });
   }, [downloads]);
+
   async function submit(data: FormData) {
     if (count < 2) return;
+
     const result = await mutateAsync({
       scopusFile: selected.scopus ? data.scopusFile?.[0] : undefined,
       wosFile: selected.wos ? data.wosFile?.[0] : undefined,
@@ -65,41 +72,15 @@ export default function MergePage() {
       limit: selected.openalex ? data.limit : undefined,
       outputFormat: data.outputFormat,
     });
+
     setDownloads({
       worksUrl: result.downloadWorksUrl,
       removedUrl: result.downloadRemovedUrl,
       fileName: result.fileName,
+      venn: result.venn,
     });
   }
-  const card = (
-    key: keyof typeof selected,
-    title: string,
-    color: string,
-    children: React.ReactNode,
-  ) => (
-    <div
-      className={`rounded-xl border-2 bg-white p-5 transition ${selected[key] ? color : "border-slate-200"}`}
-    >
-      <button
-        type="button"
-        onClick={() => toggle(key)}
-        className="flex w-full items-center justify-between text-left"
-      >
-        <span className="flex items-center gap-3 text-lg font-semibold text-slate-800">
-          <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
-            <Database size={26} weight="duotone" />
-          </span>
-          {title}
-        </span>
-        <span
-          className={`flex h-7 w-7 items-center justify-center rounded-full border ${selected[key] ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 text-transparent"}`}
-        >
-          <Check size={17} weight="bold" />
-        </span>
-      </button>
-      {selected[key] && <div className="mt-5">{children}</div>}
-    </div>
-  );
+
   return (
     <MainLayout>
       <Head>
@@ -127,10 +108,12 @@ export default function MergePage() {
           </div>
         )}
         <div className="grid gap-5 lg:grid-cols-3">
-          {card(
-            "scopus",
-            "Scopus",
-            "border-blue-500",
+          <InputCard
+            title="Scopus"
+            color="border-blue-500"
+            isSelected={selected.scopus}
+            setSelect={() => toggle("scopus")}
+          >
             <>
               <label
                 htmlFor="scopusFile"
@@ -154,12 +137,14 @@ export default function MergePage() {
               {scopus?.[0] && (
                 <p className="mt-2 text-sm text-blue-700">{scopus[0].name}</p>
               )}
-            </>,
-          )}
-          {card(
-            "wos",
-            "Web of Science",
-            "border-orange-500",
+            </>
+          </InputCard>
+          <InputCard
+            title="Web of Science"
+            color="border-orange-500"
+            isSelected={selected.wos}
+            setSelect={() => toggle("wos")}
+          >
             <>
               <label
                 htmlFor="wosFile"
@@ -183,12 +168,14 @@ export default function MergePage() {
               {wos?.[0] && (
                 <p className="mt-2 text-sm text-orange-700">{wos[0].name}</p>
               )}
-            </>,
-          )}
-          {card(
-            "openalex",
-            "OpenAlex",
-            "border-green-500",
+            </>
+          </InputCard>
+          <InputCard
+            title="OpenAlex"
+            color="border-green-500"
+            isSelected={selected.openalex}
+            setSelect={() => toggle("openalex")}
+          >
             <div className="space-y-4">
               <label className="block text-sm font-medium text-slate-700">
                 Termo de busca
@@ -211,8 +198,8 @@ export default function MergePage() {
               <p className="flex items-center gap-2 text-sm text-slate-500">
                 <MagnifyingGlass size={17} /> Máximo permitido: 100.000 works
               </p>
-            </div>,
-          )}
+            </div>
+          </InputCard>
         </div>
         <div className="flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:flex-row">
           <div>
@@ -277,6 +264,7 @@ export default function MergePage() {
             </div>
           </section>
         )}
+        {downloads && <VennSection rows={downloads.venn} />}
       </form>
     </MainLayout>
   );

@@ -31,6 +31,7 @@
     "react-dom": "^18",
     "react-hook-form": "^7.53.2",
     "react-query": "^3.39.3",
+    "react-venn-diagram": "^1.0.0",
     "recharts": "^2.15.3",
     "sigma": "^3.0.1",
     "tailwind-merge": "^3.6.0",
