@@ -1,13 +1,106 @@
 import os
+import uuid
 
 from flask import Blueprint, jsonify, request
-from src.utils.constants import LABEL_MAP
+from src.utils.constants import LABEL_MAP, OUTPUT_FOLDER
 from src.utils.expections import NotImplementedYet
 from werkzeug.utils import secure_filename
 
 import nbviz_scientometric_tools as st
 
 analytics_bp = Blueprint('analytics', __name__)
+
+# A WebGL canvas can draw many primitives, but transferring and indexing an
+# unbounded graph in the browser makes the whole page unresponsive. These caps
+# preserve the most relevant (most connected) part of a large network.
+MAX_RENDER_NODES = 5_000
+MAX_RENDER_EDGES = 12_000
+
+
+def save_pajek_graph(graph_data, graph_type):
+    """Persist the complete graph so the preview never has to carry it."""
+    file_name = f"rede_{graph_type}_{uuid.uuid4()}.net"
+    output = os.path.join(OUTPUT_FOLDER, file_name)
+    node_map = {}
+
+    # Write incrementally: a large network must not become one giant Python
+    # string before it is sent to disk.
+    with open(output, "w", encoding="utf-8", newline="\n") as graph_file:
+        graph_file.write(f"*Vertices {len(graph_data['nodes'])}\n")
+        for index, node in enumerate(graph_data["nodes"], start=1):
+            data = node["data"]
+            node_id = data["id"]
+            node_map[node_id] = index
+            label = str(data.get("label", node_id)).replace('"', "'")
+            graph_file.write(f'{index} "{label}"\n')
+
+        graph_file.write("*Edges\n")
+        for edge in graph_data["edges"]:
+            data = edge["data"]
+            source = node_map.get(data["source"])
+            target = node_map.get(data["target"])
+            if source and target:
+                graph_file.write(f"{source} {target} {data.get('weight', 1)}\n")
+
+    return file_name
+
+
+def compact_graph_for_rendering(graph_data):
+    nodes = graph_data["nodes"]
+    edges = graph_data["edges"]
+    original = {"nodes": len(nodes), "edges": len(edges)}
+
+    if len(nodes) <= MAX_RENDER_NODES and len(edges) <= MAX_RENDER_EDGES:
+        graph_data["meta"] = {
+            "original": original,
+            "displayed": original,
+            "simplified": False,
+        }
+        return graph_data
+
+    # Weighted degree picks the authors/keywords that carry most of the network.
+    weighted_degree = {}
+    for edge in edges:
+        data = edge["data"]
+        weight = data.get("weight", 1)
+        weighted_degree[data["source"]] = weighted_degree.get(data["source"], 0) + weight
+        weighted_degree[data["target"]] = weighted_degree.get(data["target"], 0) + weight
+
+    selected_ids = {
+        node_id
+        for node_id, _ in sorted(
+            weighted_degree.items(), key=lambda item: (-item[1], item[0])
+        )[:MAX_RENDER_NODES]
+    }
+    selected_edges = [
+        edge for edge in edges
+        if edge["data"]["source"] in selected_ids
+        and edge["data"]["target"] in selected_ids
+    ]
+    selected_edges.sort(
+        key=lambda edge: (
+            -edge["data"].get("weight", 1),
+            edge["data"]["source"],
+            edge["data"]["target"],
+        )
+    )
+    selected_edges = selected_edges[:MAX_RENDER_EDGES]
+    visible_ids = {
+        node_id
+        for edge in selected_edges
+        for node_id in (edge["data"]["source"], edge["data"]["target"])
+    }
+    selected_nodes = [node for node in nodes if node["data"]["id"] in visible_ids]
+
+    return {
+        "nodes": selected_nodes,
+        "edges": selected_edges,
+        "meta": {
+            "original": original,
+            "displayed": {"nodes": len(selected_nodes), "edges": len(selected_edges)},
+            "simplified": True,
+        },
+    }
 
 @analytics_bp.route("/graph", methods=["POST"])
 def get_graph_format():
@@ -38,9 +131,13 @@ def get_graph_format():
             raise ValueError
 
         separators = [";"] if col in ["Authors", "AU"] else [";", ",", "and"]
-        graph_data = st.graph_formatter(df, col, separators)
+        complete_graph = st.graph_formatter(df, col, separators)
+        file_name = save_pajek_graph(complete_graph, graph_type)
+        preview_graph = compact_graph_for_rendering(complete_graph)
+        preview_graph["download_url"] = f"/download/{file_name}"
+        preview_graph["file_name"] = file_name
 
-        return jsonify(graph_data)
+        return jsonify(preview_graph)
 
     except ValueError as e:
         return f"File extension not supported: {str(e)}", 404
