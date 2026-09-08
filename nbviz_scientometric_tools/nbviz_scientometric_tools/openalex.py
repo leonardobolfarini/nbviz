@@ -100,6 +100,7 @@ def format_openalex_response(article):
         "Abstract": abstract_text,
         "Keyword": keywords_str,
         "References": references_str,
+        "_database": "openalex",
     }
 
 

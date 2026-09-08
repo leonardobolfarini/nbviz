@@ -78,6 +78,7 @@ def process_wos_data(df: pl.DataFrame, header: list[tuple[str, int]]) -> pl.Data
         .map_elements(wos_authors_field_format, return_dtype=pl.String),
         pl.col("CR").str.replace_all('"', ""),
         pl.col("DE").str.replace_all('"', ""),
+        pl.lit("wos").alias("_database"),
     )
 
 
@@ -111,7 +112,9 @@ def process_scopus_data(
         .str.split(by=");")
         .list.eval(authors + ", " + year + ", " + other_infos)
         .list.join("; "),
+        pl.lit("scopus").alias("_database"),
     )
+
 
 def merge_same_database(lazyframes: list[pl.LazyFrame]) -> pl.LazyFrame:
     if not lazyframes:
@@ -121,15 +124,55 @@ def merge_same_database(lazyframes: list[pl.LazyFrame]) -> pl.LazyFrame:
 
     return df_concat
 
+
 def merge_and_process(
     dfs_to_concat: list[pl.DataFrame], subset_cols: list
-) -> tuple[pl.DataFrame, pl.DataFrame]:
+) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]:
     df = pl.concat(dfs_to_concat).with_row_index("_row_id")
 
-    with_doi = df.filter(pl.col("DOI").is_not_null()).unique(subset=["DOI"])
-    without_doi = df.filter(pl.col("DOI").is_null())
+    doi_normalized = (
+        pl.col("DOI")
+        .fill_null("")
+        .str.to_lowercase()
+        .str.strip_chars()
+        .str.replace(r"^https?://(dx\.)?doi\.org/", "")
+    )
+    df = df.with_columns(doi_normalized.alias("_normalized_doi"))
 
-    df_final = pl.concat([with_doi, without_doi]).unique(subset=subset_cols, keep="first")
+    doi_databases = (
+        df.filter(pl.col("_normalized_doi") != "")
+        .group_by("_normalized_doi")
+        .agg(pl.col("_database").unique().sort().alias("_databases"))
+    )
+
+    with_doi = df.filter(pl.col("_normalized_doi") != "").unique(
+        subset=["_normalized_doi"]
+    ).join(doi_databases, on="_normalized_doi", how="left")
+
+    without_doi = df.filter(pl.col("_normalized_doi") == "").with_columns(
+        pl.concat_list([pl.col("_database")]).alias("_databases")
+    )
+
+    candidates = pl.concat([with_doi, without_doi])
+
+    df_for_venn = (
+        candidates.explode("_databases")
+        .group_by(["Title", "Year"])
+        .agg(pl.col("_databases").unique().sort().alias("_databases"))
+        .with_columns(pl.col("_databases").list.join("+").alias("combination"))
+        .group_by("combination")
+        .agg(pl.len().alias("count"))
+        .sort("combination")
+    )
+
+    df_final = candidates.unique(
+        subset=subset_cols, keep="first"
+    )
+
     df_removed = df.join(df_final.select("_row_id"), on="_row_id", how="anti")
 
-    return df_final.drop("_row_id"), df_removed.drop("_row_id")
+    return (
+        df_final.drop(["_row_id", "_database", "_normalized_doi", "_databases"]),
+        df_removed.drop(["_row_id", "_database", "_normalized_doi"]),
+        df_for_venn,
+    )
