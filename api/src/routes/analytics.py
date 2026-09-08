@@ -8,23 +8,17 @@ from werkzeug.utils import secure_filename
 
 import nbviz_scientometric_tools as st
 
-analytics_bp = Blueprint('analytics', __name__)
+analytics_bp = Blueprint("analytics", __name__)
 
-# A WebGL canvas can draw many primitives, but transferring and indexing an
-# unbounded graph in the browser makes the whole page unresponsive. These caps
-# preserve the most relevant (most connected) part of a large network.
 MAX_RENDER_NODES = 5_000
 MAX_RENDER_EDGES = 12_000
 
 
 def save_pajek_graph(graph_data, graph_type):
-    """Persist the complete graph so the preview never has to carry it."""
     file_name = f"rede_{graph_type}_{uuid.uuid4()}.net"
     output = os.path.join(OUTPUT_FOLDER, file_name)
     node_map = {}
 
-    # Write incrementally: a large network must not become one giant Python
-    # string before it is sent to disk.
     with open(output, "w", encoding="utf-8", newline="\n") as graph_file:
         graph_file.write(f"*Vertices {len(graph_data['nodes'])}\n")
         for index, node in enumerate(graph_data["nodes"], start=1):
@@ -58,13 +52,16 @@ def compact_graph_for_rendering(graph_data):
         }
         return graph_data
 
-    # Weighted degree picks the authors/keywords that carry most of the network.
     weighted_degree = {}
     for edge in edges:
         data = edge["data"]
         weight = data.get("weight", 1)
-        weighted_degree[data["source"]] = weighted_degree.get(data["source"], 0) + weight
-        weighted_degree[data["target"]] = weighted_degree.get(data["target"], 0) + weight
+        weighted_degree[data["source"]] = (
+            weighted_degree.get(data["source"], 0) + weight
+        )
+        weighted_degree[data["target"]] = (
+            weighted_degree.get(data["target"], 0) + weight
+        )
 
     selected_ids = {
         node_id
@@ -73,7 +70,8 @@ def compact_graph_for_rendering(graph_data):
         )[:MAX_RENDER_NODES]
     }
     selected_edges = [
-        edge for edge in edges
+        edge
+        for edge in edges
         if edge["data"]["source"] in selected_ids
         and edge["data"]["target"] in selected_ids
     ]
@@ -101,6 +99,7 @@ def compact_graph_for_rendering(graph_data):
             "simplified": True,
         },
     }
+
 
 @analytics_bp.route("/graph", methods=["POST"])
 def get_graph_format():
