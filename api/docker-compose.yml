@@ -1,0 +1,9 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ${POSTGRESQL_DB}
+      POSTGRES_USER: ${POSTGRESQL_USER}
+      POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD}
+    ports:
+      - "5432:5432"
