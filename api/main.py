@@ -6,6 +6,7 @@ from flask_cors import CORS
 from flask_migrate import Migrate
 from src.extensions.database import database_uri, db
 from src.routes.analytics import analytics_bp
+from src.routes.auth import auth_bp
 from src.routes.files import files_bp
 from src.utils.clean_up import start_cleanup_thread
 
@@ -26,6 +27,7 @@ migrate = Migrate(app, db)
 
 app.register_blueprint(files_bp)
 app.register_blueprint(analytics_bp)
+app.register_blueprint(auth_bp)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5009, debug=True)

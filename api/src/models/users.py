@@ -25,6 +25,13 @@ class Users(db.Model):
     def __repr__(self) -> str:
         return f"User(id={self.id}, email={self.email})"
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "email": self.email,
+            "analyses": self.analyses,
+        }
+
 
 class Analyses(db.Model):
     __tablename__ = "user_analyses"
