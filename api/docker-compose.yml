@@ -1,4 +1,32 @@
 services:
+  # backend:
+  #   build: .
+  #   env_file: .env
+  #   environment:
+  #     POSTGRESQL_HOST: db
+  #     REDIS_URL: redis://redis:6379/0
+  #   ports:
+  #     - "5009:5009"
+  #   volumes:
+  #     - ./storage:/app/storage
+  #   depends_on:
+  #     - db
+  #     - redis
+
+  worker:
+    build: .
+    command: python worker.py
+    env_file: .env
+    environment:
+      POSTGRESQL_HOST: db
+      REDIS_URL: redis://redis:6379/0
+      START_FILE_CLEANUP: "false"
+    volumes:
+      - ./storage:/app/storage
+    depends_on:
+      - db
+      - redis
+
   db:
     image: postgres:15
     environment:
@@ -7,3 +35,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD}
     ports:
       - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
