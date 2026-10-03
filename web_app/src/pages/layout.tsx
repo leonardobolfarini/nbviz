@@ -1,7 +1,11 @@
 import Image from "next/image";
 import { NavBar } from "../components/Navbar";
+import Link from "next/link";
+import { useAuth } from "../contexts/AuthContext";
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, logout } = useAuth();
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
       <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6">
@@ -15,8 +19,23 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             priority
           />
         </div>
-        <div className="hidden text-sm text-slate-500 md:block">
-          Ferramenta para análise e visualização de dados científicos
+        <div className="hidden text-sm text-blue-500 md:block">
+          {isLoading ? null : isAuthenticated ? (
+            <button
+              type="button"
+              onClick={() => void logout()}
+              className="cursor-pointer hover:underline hover:text-blue-700"
+            >
+              Sair
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="cursor-pointer hover:underline hover:text-blue-700"
+            >
+              Entrar
+            </Link>
+          )}
         </div>
       </header>
 

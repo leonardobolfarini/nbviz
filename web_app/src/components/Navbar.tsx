@@ -3,24 +3,38 @@ import {
   Info,
   Stack,
   TrendUp,
+  User,
   Users,
 } from "@phosphor-icons/react/dist/ssr";
 import { useRouter } from "next/router";
-const items = [
+import { useAuth } from "../contexts/AuthContext";
+
+const publicLinks = [
   { href: "/", label: "Sobre", icon: Info },
   { href: "/mesclagem", label: "Mesclagem", icon: Database },
   { href: "/unificar", label: "Unificar", icon: Stack },
   { href: "/redes", label: "Redes", icon: Users },
   { href: "/analises", label: "Análises", icon: TrendUp },
 ];
+
+const authenticatedLinks = [
+  { href: "/perfil", label: "Meu Perfil", icon: User },
+];
+
 export function NavBar() {
+  const { isAuthenticated } = useAuth();
+
+  const links = isAuthenticated
+    ? [...publicLinks, ...authenticatedLinks]
+    : [...publicLinks];
+
   const { pathname } = useRouter();
   return (
     <nav
       className="flex gap-3 md:flex-col md:gap-4"
       aria-label="Navegação principal"
     >
-      {items.map(({ href, label, icon: Icon }) => (
+      {links.map(({ href, label, icon: Icon }) => (
         <a
           key={href}
           href={href}
