@@ -1,4 +1,5 @@
-OUTPUT_FOLDER = "outputs"
+OUTPUT_FOLDER = "storage/analyses"
+INPUT_FOLDER = "storage/processing"
 
 HEADER_SCOPUS = [
     ("Authors", 0),

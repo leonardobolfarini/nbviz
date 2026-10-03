@@ -1,14 +1,17 @@
 import os
+import shutil
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 from flask import Blueprint, jsonify, request, send_file
+from flask_jwt_extended import get_jwt_identity, jwt_required
+from src.extensions.database import db
+from src.extensions.queue import processing_queue
+from src.models.users import Analyses, Users
 from src.utils.constants import (
-    HEADER_SCOPUS,
-    HEADER_WOS,
-    OPENALEX_TO_SCOPUS,
+    INPUT_FOLDER,
     OUTPUT_FOLDER,
-    WOS_TO_SCOPUS,
 )
 from src.utils.expections import OutputFormatNotPassed
 
@@ -16,6 +19,23 @@ import nbviz_scientometric_tools as st
 
 load_dotenv()
 files_bp = Blueprint("files", __name__)
+
+
+@files_bp.route("/analyses/<analysis_id>", methods=["GET"])
+@jwt_required()
+def get_analysis(analysis_id):
+    current_user = get_jwt_identity()
+    user = db.session.scalars(db.select(Users).where(Users.email == current_user)).one()
+
+    try:
+        analyse = db.session.get(Analyses, uuid.UUID(analysis_id))
+    except ValueError:
+        return jsonify({"message": "Invalid analysis id."}), 400
+
+    if analyse is None or analyse.user_id != user.id:
+        return jsonify({"message": "Analysis not found."}), 404
+
+    return jsonify(analyse.to_dict())
 
 
 @files_bp.route("/download/<file_name>", methods=["GET"])
@@ -64,88 +84,82 @@ def merge_same_base_files():
 
 
 @files_bp.route("/process", methods=["POST"])
+@jwt_required()
 def process_files():
+    current_user = get_jwt_identity()
+    user = db.session.scalars(db.select(Users).where(Users.email == current_user)).one()
+
     scopus_file = request.files.get("scopusFile")
     wos_file = request.files.get("wosFile")
     openalex_search = request.form.get("searchTerm")
     output_format = request.form.get("outputFormat")
     limit = request.form.get("limit", type=int)
 
-    openalex_key = os.getenv("OPENALEX_API_KEY")
-    dfs_to_concat = []
-
     if not output_format:
         raise OutputFormatNotPassed(
             'The property "outputFormat" is required to generate the output.'
         )
+    if output_format not in {"scopus", "openalex", "wos"}:
+        return jsonify({"message": "Unsupported output format."}), 400
 
-    if scopus_file:
-        scopus_df = st.read_scopus_file(scopus_file.read())
-        scopus_df = st.keep_columns(scopus_df, HEADER_SCOPUS)
-        processed_scopus_df = st.process_scopus_data(scopus_df, HEADER_SCOPUS)
-        dfs_to_concat.append(processed_scopus_df)
-
-    if wos_file:
-        wos_df = st.read_wos_file(wos_file)
-        wos_df = st.keep_columns(wos_df, HEADER_WOS)
-        processed_wos_df = st.process_wos_data(wos_df, HEADER_WOS)
-        processed_wos_df = processed_wos_df.rename(WOS_TO_SCOPUS)
-        dfs_to_concat.append(processed_wos_df)
-
-    if openalex_search:
-        processed_oa_df = st.fetch_openalex_works(
-            openalex_search, openalex_key, limit=limit
-        )
-        processed_oa_df = processed_oa_df.rename(OPENALEX_TO_SCOPUS)
-        dfs_to_concat.append(processed_oa_df)
-
-    if len(dfs_to_concat) <= 1:
+    source_count = sum(
+        bool(source) for source in (scopus_file, wos_file, openalex_search)
+    )
+    if source_count <= 1:
         return jsonify(
             {
                 "message": "Is required two or more databases to realize the concatenation."
             }
         ), 400
 
-    if output_format == "scopus" or output_format == "openalex":
-        configs = {
-            "separator": ",",
-            "quote_char": '"',
-            "quote_style": "always",
-        }
-    elif output_format == "wos":
-        configs = {"separator": "\t"}
-    else:
-        configs = {}
-
-    output_extension = (
-        "csv" if output_format == "scopus" or output_format == "openalex" else "txt"
-    )
-    requisition_id = str(uuid.uuid4())
-
-    output_name = f"all_in_one_{requisition_id}.{output_extension}"
-    output_removed = f"removed_{requisition_id}.{output_extension}"
-    output_works = os.path.join(OUTPUT_FOLDER, output_name)
-    output_removed_works = os.path.join(OUTPUT_FOLDER, output_removed)
-
+    analyse = None
+    input_folder = None
     try:
-        merged_data, removed_merged_data, venn_df = st.merge_and_process(
-            dfs_to_concat,
-            ["Title", "Year"],
+        analyse = Analyses(
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=3),
+            user_id=user.id,
         )
+        db.session.add(analyse)
+        db.session.commit()
 
-        merged_data.write_csv(output_works, **configs)
-        removed_merged_data.write_csv(output_removed_works, **configs)
+        input_folder = os.path.join(INPUT_FOLDER, str(analyse.id))
+        os.makedirs(input_folder, exist_ok=True)
 
+        scopus_path = None
+        if scopus_file:
+            scopus_path = os.path.join(input_folder, "scopus")
+            scopus_file.save(scopus_path)
+
+        wos_path = None
+        if wos_file:
+            wos_path = os.path.join(input_folder, "wos")
+            wos_file.save(wos_path)
+
+        job = processing_queue.enqueue(
+            "src.tasks.processing.process_analysis",
+            str(analyse.id),
+            scopus_path,
+            wos_path,
+            openalex_search,
+            output_format,
+            limit,
+            input_folder,
+        )
         return jsonify(
             {
-                "files": {
-                    "download_works_url": f"/download/{output_name}",
-                    "download_removed_url": f"/download/{output_removed}",
-                    "file_name": output_name,
-                },
-                "venn": venn_df.to_dicts(),
+                "id": str(analyse.id),
+                "job_id": job.id,
+                "status": analyse.status,
             }
-        )
+        ), 202
 
     except Exception as e:
+        db.session.rollback()
+        if analyse is not None:
+            failed_analysis = db.session.get(Analyses, analyse.id)
+            if failed_analysis is not None:
+                failed_analysis.status = "error"
+                db.session.commit()
+        if input_folder:
+            shutil.rmtree(input_folder, ignore_errors=True)
         return jsonify({"message": f"Error trying to concat the files: {str(e)}"}), 500

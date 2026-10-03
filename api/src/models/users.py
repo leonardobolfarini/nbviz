@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey
+from sqlalchemy import DateTime, Enum, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql.functions import now
@@ -27,9 +28,9 @@ class Users(db.Model):
 
     def to_dict(self):
         return {
-            "id": self.id,
+            "id": str(self.id),
             "email": self.email,
-            "analyses": self.analyses,
+            "analyses": [analysis.to_dict() for analysis in self.analyses],
         }
 
 
@@ -39,12 +40,22 @@ class Analyses(db.Model):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    download_url: Mapped[str]
-    removed_url: Mapped[str]
-    venn: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    status: Mapped[str] = mapped_column(
+        Enum("pending", "finished", "processing", "error", name="status"),
+        nullable=False,
+        server_default="pending",
+    )
+    download_url: Mapped[str | None] = mapped_column(nullable=True)
+    removed_url: Mapped[str | None] = mapped_column(nullable=True)
+    venn: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=now(),
+        nullable=False,
+    )
+
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
         nullable=False,
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -55,3 +66,14 @@ class Analyses(db.Model):
 
     def __repr__(self) -> str:
         return f"Analyze(id={self.id}, user_id={self.user_id}, download_url={self.download_url}, removed_url={self.removed_url})"
+
+    def to_dict(self):
+        return {
+            "id": str(self.id),
+            "status": self.status,
+            "download_url": self.download_url,
+            "removed_url": self.removed_url,
+            "venn": self.venn,
+            "created_at": self.created_at.isoformat(),
+            "expires_at": self.expires_at.isoformat(),
+        }
