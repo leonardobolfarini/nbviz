@@ -10,9 +10,7 @@ export default async function handler(
 
   const response = await fetch(`${process.env.INTERNAL_API_URL}/users/login`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(req.body),
   });
 

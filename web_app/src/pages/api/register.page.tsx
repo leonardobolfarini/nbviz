@@ -12,5 +12,27 @@ export default async function handler(
     body: JSON.stringify(req.body),
   });
 
-  return res.status(response.status).json(await response.json());
+  const data = await response.json();
+
+  if (!response.ok) {
+    return res.status(response.status).json(data);
+  }
+
+  res.setHeader(
+    "Set-Cookie",
+    [
+      `nbviz.token=${encodeURIComponent(data.access_token)}`,
+      "HttpOnly",
+      process.env.NODE_ENV === "production" ? "Secure" : "",
+      "SameSite=lax",
+      "path=/",
+      "MaxAge=86400",
+    ]
+      .filter(Boolean)
+      .join("; "),
+  );
+
+  return res.status(200).json({
+    success: true,
+  });
 }

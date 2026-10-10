@@ -1,3 +1,4 @@
+import { useAuth } from "@/src/contexts/AuthContext";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   EnvelopeSimple,
@@ -26,6 +27,7 @@ type RegisterSchema = z.infer<typeof registerSchema>;
 
 export default function Register() {
   const router = useRouter();
+  const { refreshUser } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirmation, setShowPasswordConfirmation] =
     useState(false);
@@ -59,20 +61,21 @@ export default function Register() {
       return;
     }
 
-    await router.push("/login?registered=1");
+    await refreshUser();
+    await router.replace("/");
   }
 
   return (
     <div
-      className="grid h-screen max-h-screen grid-cols-1 bg-cover bg-center bg-no-repeat p-6 md:grid-cols-2 md:p-12"
+      className="grid min-h-dvh grid-cols-1 bg-cover bg-center bg-no-repeat p-4 sm:p-6 md:grid-cols-2 md:p-8"
       style={{ backgroundImage: "url('/login_background.png')" }}
     >
       <form
         onSubmit={handleSubmit(handleRegister)}
-        className="col-start-1 my-auto flex w-full max-w-xl flex-col gap-2 rounded-xl bg-white p-8 shadow-xl md:col-start-2 md:justify-self-end md:p-12"
+        className="col-start-1 my-auto flex w-full max-w-xl flex-col gap-1 rounded-xl bg-white p-6 shadow-xl sm:gap-2 sm:p-8 md:col-start-2 md:justify-self-end"
       >
         <h1 className="text-4xl font-bold text-black">Crie sua conta</h1>
-        <p className="mb-6 text-slate-500">
+        <p className="mb-3 text-slate-500 sm:mb-4">
           Crie uma conta para salvar suas mesclagens.
         </p>
 
@@ -89,7 +92,9 @@ export default function Register() {
             {...register("email")}
           />
         </div>
-        <p className="min-h-5 text-sm text-red-600">{errors.email?.message}</p>
+        <p className="min-h-4 text-sm leading-4 text-red-600">
+          {errors.email?.message}
+        </p>
 
         <label htmlFor="password" className="text-md font-semibold text-black">
           Senha
@@ -112,7 +117,7 @@ export default function Register() {
             {showPassword ? <EyeSlash size={24} /> : <Eye size={24} />}
           </button>
         </div>
-        <p className="min-h-5 text-sm text-red-600">
+        <p className="min-h-4 text-sm leading-4 text-red-600">
           {errors.password?.message}
         </p>
 
@@ -146,7 +151,7 @@ export default function Register() {
             )}
           </button>
         </div>
-        <p className="min-h-5 text-sm text-red-600">
+        <p className="min-h-4 text-sm leading-4 text-red-600">
           {errors.passwordConfirmation?.message}
         </p>
 
@@ -157,12 +162,12 @@ export default function Register() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="mt-2 cursor-pointer rounded-lg bg-emerald-600 p-3 font-bold text-gray-100 transition-colors hover:bg-emerald-700 hover:text-white disabled:cursor-not-allowed disabled:bg-gray-300"
+          className="mt-1 cursor-pointer rounded-lg bg-emerald-600 p-3 font-bold text-gray-100 transition-colors hover:bg-emerald-700 hover:text-white disabled:cursor-not-allowed disabled:bg-gray-300"
         >
           {isSubmitting ? "Criando conta..." : "Criar conta"}
         </button>
 
-        <p className="mt-3 text-center text-sm text-gray-500">
+        <p className="mt-2 text-center text-sm text-gray-500">
           Já tem uma conta?{" "}
           <Link
             href="/login"
