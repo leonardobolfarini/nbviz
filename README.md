@@ -57,23 +57,6 @@ Para publicar uma nova versão no PyPI:
     pip install -r requirements.txt
     python main.py
 
-#### Migrations do banco
-
-Inicialize o Alembic apenas uma vez:
-
-    flask --app main:app db init
-
-Depois de alterar ou criar modelos, gere uma migration e aplique-a ao banco:
-
-    flask --app main:app db migrate -m "descreva a alteração"
-    flask --app main:app db upgrade
-
-Para aplicar migrations já existentes no projeto:
-
-    flask --app main:app db upgrade
-
-Os arquivos gerados em `migrations/` devem ser versionados junto com o código.
-
 ### 3. Frontend
 
     cd web_app
