@@ -129,13 +129,13 @@ export default function Home() {
               [
                 [
                   "1",
-                  "Mesclagem de bases diferentes",
+                  "Mesclagem",
                   "Selecione Scopus, Web of Science e/ou OpenAlex. Escolha pelo menos duas fontes.",
                   "blue",
                 ],
                 [
                   "2",
-                  "Fusão da mesma base",
+                  "Unificação",
                   "Escolha uma base e adicione quantos arquivos quiser para contornar limites de exportação.",
                   "orange",
                 ],
@@ -157,17 +157,17 @@ export default function Home() {
                 key={number}
                 className={`rounded-xl border p-5 ${colors[color]}`}
               >
-                <div className="flex items-start gap-4">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-current bg-white text-lg font-bold">
+                <div className="flex items-start gap-2">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-current bg-white text-lg font-bold">
                     {number}
                   </span>
                   <div>
                     <h3 className="font-semibold text-slate-800">{title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
-                      {text}
-                    </p>
                   </div>
                 </div>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  {text}
+                </p>
               </div>
             ))}
           </div>
