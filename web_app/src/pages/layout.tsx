@@ -2,9 +2,17 @@ import Image from "next/image";
 import { NavBar } from "../components/Navbar";
 import Link from "next/link";
 import { useAuth } from "../contexts/AuthContext";
+import { useRouter } from "next/router";
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, logout } = useAuth();
+  const router = useRouter();
+
+  async function handleLogout() {
+    await logout();
+
+    await router.replace("/");
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
@@ -23,7 +31,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           {isLoading ? null : isAuthenticated ? (
             <button
               type="button"
-              onClick={() => void logout()}
+              onClick={() => handleLogout()}
               className="cursor-pointer hover:underline hover:text-blue-700"
             >
               Sair
