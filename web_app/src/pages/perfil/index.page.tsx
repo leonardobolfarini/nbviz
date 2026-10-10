@@ -5,14 +5,16 @@ import {
   DownloadSimple,
   File,
   SpinnerGap,
-  Trash,
   UserCircle,
   WarningCircle,
 } from "@phosphor-icons/react/dist/ssr";
+import type { GetServerSideProps } from "next";
 import Head from "next/head";
 import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { MainLayout } from "../layout";
+import { DeleteAccountDialog } from "./components/dialog";
+import { PerfilFallback } from "./components/fallback";
 
 type AnalysisStatus = "finished" | "processing" | "error";
 
@@ -80,9 +82,52 @@ const statusStyle = {
   },
 };
 
+export const getServerSideProps: GetServerSideProps = async ({
+  req,
+  res,
+  resolvedUrl,
+}) => {
+  const token = req.cookies["nbviz.token"];
+
+  if (!token) {
+    return {
+      redirect: {
+        destination: `/login?next=${encodeURIComponent(resolvedUrl)}`,
+        permanent: false,
+      },
+    };
+  }
+
+  const response = await fetch(`${process.env.INTERNAL_API_URL}/users/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    res.setHeader(
+      "Set-Cookie",
+      "nbviz.token=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0",
+    );
+
+    return {
+      redirect: {
+        destination: `/login?next=${encodeURIComponent(resolvedUrl)}`,
+        permanent: false,
+      },
+    };
+  }
+
+  return { props: {} };
+};
+
 export default function ProfilePage() {
   const { user } = useAuth();
   const [openAnalysis, setOpenAnalysis] = useState<string | null>(null);
+
+  if (!user) {
+    return <PerfilFallback />;
+  }
 
   return (
     <MainLayout>
@@ -114,12 +159,7 @@ export default function ProfilePage() {
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            className="inline-flex w-fit items-center gap-2 rounded-lg border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-700 transition-colors hover:bg-rose-50"
-          >
-            <Trash size={18} /> Excluir conta
-          </button>
+          <DeleteAccountDialog />
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white shadow-sm">

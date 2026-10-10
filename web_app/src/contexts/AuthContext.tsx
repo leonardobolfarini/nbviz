@@ -17,6 +17,7 @@ type AuthContextData = {
   isLoading: boolean;
   refreshUser: () => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextData | null>(null);
@@ -55,6 +56,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser();
   }, []);
 
+  async function deleteAccount() {
+    const response = await fetch("/api/delete", { method: "DELETE" });
+
+    if (!response.ok) {
+      throw new Error("Não foi possível excluir a conta.");
+    }
+
+    setUser(null);
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -63,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         refreshUser,
         logout,
+        deleteAccount,
       }}
     >
       {children}
