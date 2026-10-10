@@ -6,7 +6,7 @@ import {
   LockSimple,
 } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
-import router from "next/router";
+import { useRouter } from "next/router";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "../../contexts/AuthContext";
@@ -20,6 +20,7 @@ type LoginSchema = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const { refreshUser } = useAuth();
+  const router = useRouter();
   const {
     register,
     handleSubmit,
@@ -57,10 +58,10 @@ export default function Login() {
       }),
     });
 
-    if (response.status === 404) {
+    if (response.status === 401) {
       setError("root", {
         type: "manual",
-        message: "E-mail ou senha incorretos.",
+        message: "Credências inválidas.",
       });
 
       return;
@@ -76,20 +77,27 @@ export default function Login() {
     }
 
     await refreshUser();
-    await router.push("/");
+
+    const next = router.query.next;
+    const destination =
+      typeof next === "string" && next.startsWith("/") && !next.startsWith("//")
+        ? next
+        : "/";
+
+    await router.replace(destination);
   }
 
   return (
     <div
-      className="max-h-screen h-screen bg-cover bg-center bg-no-repeat grid grid-cols-2 p-12"
+      className="grid min-h-dvh grid-cols-1 bg-cover bg-center bg-no-repeat p-4 sm:p-6 md:grid-cols-2 md:p-8"
       style={{ backgroundImage: "url('/login_background.png')" }}
     >
       <form
         onSubmit={handleSubmit(handleLogin)}
-        className="col-2 rounded-xl p-16 flex flex-col gap-2 bg-white"
+        className="my-auto flex w-full max-w-xl flex-col gap-2 rounded-xl bg-white p-6 shadow-xl sm:p-8 md:col-start-2 md:justify-self-end md:px-12 md:pt-12 md:pb-8"
       >
         <h1 className="font-bold text-black text-4xl">Acesse sua conta</h1>
-        <p className="text-slate-500 mb-6">Entre para continuar no NBVIZ</p>
+        <p className="mb-4 text-slate-500">Entre para continuar no NBVIZ</p>
 
         <label htmlFor="email" className="font-semibold text-md text-black">
           E-mail
@@ -129,7 +137,7 @@ export default function Login() {
 
         <Link
           href="recover"
-          className="w-fit self-end mb-5 text-blue-700 underline cursor-pointer hover:text-blue-500 transition-colors"
+          className="mb-3 w-fit self-end cursor-pointer text-blue-700 underline transition-colors hover:text-blue-500"
         >
           Esqueceu a senha?
         </Link>
