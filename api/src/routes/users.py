@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, make_response, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from src.extensions.database import db
@@ -22,9 +22,13 @@ def get_users():
 def get_current_user():
     email = get_jwt_identity()
 
-    user = db.session.scalars(db.select(Users).where(Users.email == email)).one()
+    try:
+        user = db.session.scalars(db.select(Users).where(Users.email == email)).one()
 
-    return jsonify({"id": str(user.id), "email": str(user.email)})
+        return jsonify({"id": str(user.id), "email": str(user.email)})
+
+    except NoResultFound:
+        return make_response(jsonify({"message": "user not found"}), 404)
 
 
 @users_bp.route("/users/create", methods=["POST"])
@@ -34,7 +38,9 @@ def user_create():
     password = data.get("password")
 
     if not email or not password:
-        return jsonify({"message": "email and password are required."}, 400)
+        return make_response(
+            jsonify({"message": "email and password are required."}), 400
+        )
 
     password_hash = generate_password_hash(password)
 
@@ -43,11 +49,22 @@ def user_create():
     try:
         db.session.add(user)
         db.session.commit()
+
+        user = db.session.scalars(db.select(Users).where(Users.email == email)).one()
+
+        password_is_correct = check_password_hash(user.password_hash, password)
+
+        if not password_is_correct:
+            return make_response(jsonify({"error": "invalid credentials."}), 401)
+
+        access_token = create_access_token(identity=email)
+
+        return jsonify(access_token=access_token)
     except IntegrityError:
         db.session.rollback()
-        return jsonify({"message": "E-mail já cadastrado."}), 409
+        return make_response(jsonify({"message": "email already in use"}), 409)
 
-    return jsonify({"message": "Usuário criado com sucesso"}, 200)
+    return make_response(jsonify({"message": "user created successfully"}), 200)
 
 
 @users_bp.route("/users/login", methods=["POST"])
@@ -57,7 +74,9 @@ def login():
     password = data.get("password")
 
     if not email or not password:
-        return jsonify({"message": "email and password are required."}, 400)
+        return make_response(
+            jsonify({"error": "email and password are required."}), 400
+        )
 
     try:
         user = db.session.scalars(db.select(Users).where(Users.email == email)).one()
@@ -65,11 +84,23 @@ def login():
         password_is_correct = check_password_hash(user.password_hash, password)
 
         if not password_is_correct:
-            return jsonify({"message": "wrong password."}, 401)
+            return make_response(jsonify({"error": "invalid credentials."}), 401)
 
         access_token = create_access_token(identity=email)
 
         return jsonify(access_token=access_token)
 
     except NoResultFound:
-        return jsonify({"message": "user not found."}, 404)
+        return make_response(jsonify({"error": "invalid credentials"}), 401)
+
+
+@users_bp.route("/users/delete", methods=["DELETE"])
+@jwt_required()
+def delete():
+    email = get_jwt_identity()
+
+    user = db.session.scalars(db.select(Users).where(Users.email == email)).one()
+    db.session.delete(user)
+    db.session.commit()
+
+    return make_response(jsonify({"message": "account deleted successfully"}), 200)
