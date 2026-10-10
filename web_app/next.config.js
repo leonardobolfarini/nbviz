@@ -1,13 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  output: "standalone",
 
-  pageExtensions: ['page.tsx'],
+  pageExtensions: ["page.tsx", "page.ts"],
 
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     INTERNAL_API_URL: process.env.INTERNAL_API_URL,
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;
