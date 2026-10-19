@@ -1,5 +1,12 @@
+import hashlib
+import secrets
+import smtplib
+from datetime import UTC, datetime, timedelta
+from email.message import EmailMessage
+
 from flask import Blueprint, jsonify, make_response, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from pandas.io.stata import os
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from src.extensions.database import db
 from src.models.users import Users
@@ -64,8 +71,6 @@ def user_create():
         db.session.rollback()
         return make_response(jsonify({"message": "email already in use"}), 409)
 
-    return make_response(jsonify({"message": "user created successfully"}), 200)
-
 
 @users_bp.route("/users/login", methods=["POST"])
 def login():
@@ -104,3 +109,92 @@ def delete():
     db.session.commit()
 
     return make_response(jsonify({"message": "account deleted successfully"}), 200)
+
+
+@users_bp.route("/users/recover", methods=["POST"])
+def recover():
+    data = request.get_json()
+    email = data.get("email")
+
+    user = db.session.scalars(
+        db.select(Users).where(Users.email == email)
+    ).one_or_none()
+
+    if user:
+        token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+        user.password_reset_token_hash = token_hash
+        user.password_reset_expires_at = datetime.now(UTC) + timedelta(minutes=30)
+
+        db.session.commit()
+
+        system_email = os.getenv("EMAIL")
+        system_password = os.getenv("EMAIL_PASSWORD")
+
+        if not system_email or not system_password:
+            return make_response(
+                jsonify({"error": "system_email and system_password are required"}), 500
+            )
+
+        msg = EmailMessage()
+        msg["Subject"] = "Redefinição de senha — NBVIZ"
+        msg["From"] = system_email
+        msg["To"] = email
+        body = f"""
+        Olá,
+
+        Recebemos uma solicitação para redefinir a senha da sua conta no NBVIZ.
+
+        Para criar uma nova senha, acesse o link abaixo dentro de 30 minutos:
+
+        {f"{os.getenv("FRONTEND_URL")}/redefinir-senha?token={token}"}
+
+        Se você não solicitou essa alteração, ignore este e-mail. Sua senha continuará a mesma.
+
+        Atenciosamente,
+        Equipe NBVIZ
+        """
+        msg.set_content(body)
+
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(system_email, system_password)
+            server.send_message(msg)
+
+    return jsonify(
+        {"message": "if account exists, we will send an recuperation email to it"}
+    ), 200
+
+
+@users_bp.route("/users/change_password", methods=["PATCH"])
+def change_password():
+    data = request.get_json()
+
+    token = data.get("token")
+    password = data.get("password")
+
+    if not token or not password:
+        return make_response(jsonify({"error": "token and password are required"}), 400)
+
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+    user = db.session.scalars(
+        db.select(Users).where(Users.password_reset_token_hash == token_hash)
+    ).one_or_none()
+
+    if (
+        not user
+        or not user.password_reset_expires_at
+        or user.password_reset_expires_at <= datetime.now(UTC)
+    ):
+        return make_response(jsonify({"error": "token is invalid or expired"}), 403)
+
+    user.password_hash = generate_password_hash(password)
+
+    user.password_reset_token_hash = None
+    user.password_reset_expires_at = None
+
+    db.session.commit()
+
+    return make_response(jsonify({"message": "password changed successfully"}), 200)
