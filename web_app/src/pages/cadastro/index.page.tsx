@@ -1,4 +1,5 @@
 import { useAuth } from "@/src/contexts/AuthContext";
+import { AuthLayout } from "@/src/layouts/AuthLayout";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   EnvelopeSimple,
@@ -66,10 +67,7 @@ export default function Register() {
   }
 
   return (
-    <div
-      className="grid min-h-dvh grid-cols-1 bg-cover bg-center bg-no-repeat p-4 sm:p-6 md:grid-cols-2 md:p-8"
-      style={{ backgroundImage: "url('/login_background.png')" }}
-    >
+    <AuthLayout>
       <form
         onSubmit={handleSubmit(handleRegister)}
         className="col-start-1 my-auto flex w-full max-w-xl flex-col gap-1 rounded-xl bg-white p-6 shadow-xl sm:gap-2 sm:p-8 md:col-start-2 md:justify-self-end"
@@ -177,6 +175,6 @@ export default function Register() {
           </Link>
         </p>
       </form>
-    </div>
+    </AuthLayout>
   );
 }

@@ -1,4 +1,3 @@
-import { api } from "@/src/lib/axios";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   EnvelopeSimple,
@@ -9,7 +8,8 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "@/src/contexts/AuthContext";
+import { AuthLayout } from "@/src/layouts/AuthLayout";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -88,10 +88,7 @@ export default function Login() {
   }
 
   return (
-    <div
-      className="grid min-h-dvh grid-cols-1 bg-cover bg-center bg-no-repeat p-4 sm:p-6 md:grid-cols-2 md:p-8"
-      style={{ backgroundImage: "url('/login_background.png')" }}
-    >
+    <AuthLayout>
       <form
         onSubmit={handleSubmit(handleLogin)}
         className="my-auto flex w-full max-w-xl flex-col gap-2 rounded-xl bg-white p-6 shadow-xl sm:p-8 md:col-start-2 md:justify-self-end md:px-12 md:pt-12 md:pb-8"
@@ -136,7 +133,7 @@ export default function Login() {
         <p className="text-red-600">{errors.password?.message}</p>
 
         <Link
-          href="recover"
+          href="recuperar"
           className="mb-3 w-fit self-end cursor-pointer text-blue-700 underline transition-colors hover:text-blue-500"
         >
           Esqueceu a senha?
@@ -169,6 +166,6 @@ export default function Login() {
           Criar conta
         </Link>
       </form>
-    </div>
+    </AuthLayout>
   );
 }

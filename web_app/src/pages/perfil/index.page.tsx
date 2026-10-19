@@ -12,9 +12,9 @@ import type { GetServerSideProps } from "next";
 import Head from "next/head";
 import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { MainLayout } from "../layout";
 import { DeleteAccountDialog } from "./components/dialog";
 import { PerfilFallback } from "./components/fallback";
+import { MainLayout } from "@/src/layouts/MainLayout";
 
 type AnalysisStatus = "finished" | "processing" | "error";
 

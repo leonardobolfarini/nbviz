@@ -7,8 +7,8 @@ import Head from "next/head";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { MainLayout } from "../layout";
 import { GeneratedFile } from "../mesclagem/components/GeneratedFile";
+import { MainLayout } from "@/src/layouts/MainLayout";
 const formSchema = z.object({
   database: z.enum(["wos", "scopus"]),
   files: z

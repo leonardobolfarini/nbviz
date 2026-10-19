@@ -1,5 +1,5 @@
+import { MainLayout } from "@/src/layouts/MainLayout";
 import { LucideLoaderPinwheel } from "lucide-react";
-import { MainLayout } from "../../layout";
 import Head from "next/head";
 
 export function PerfilFallback() {

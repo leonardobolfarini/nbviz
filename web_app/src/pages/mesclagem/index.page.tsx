@@ -12,10 +12,10 @@ import Head from "next/head";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { MainLayout } from "../layout";
 import { GeneratedFile } from "./components/GeneratedFile";
 import { InputCard } from "./components/InputCard";
 import { VennSection, type VennRow } from "./components/VennSection";
+import { MainLayout } from "@/src/layouts/MainLayout";
 
 const schema = z.object({
   scopusFile: z.any().optional(),

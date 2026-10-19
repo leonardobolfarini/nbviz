@@ -12,10 +12,10 @@ import {
   Users,
 } from "@phosphor-icons/react/dist/ssr";
 import { SigmaRender } from "./components/SigmaRender";
-import { MainLayout } from "../layout";
 import Head from "next/head";
 import { GraphEdgesFormat, GraphNodesFormat } from "../types";
 import { SelectionType } from "./components/SelectionType";
+import { MainLayout } from "@/src/layouts/MainLayout";
 const getGraphFormatFile = z.object({
   graphType: z.enum(["coauthorship", "keywords"], {
     required_error: "Selecione o tipo de grafo",

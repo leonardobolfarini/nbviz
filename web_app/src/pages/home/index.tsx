@@ -1,3 +1,4 @@
+import { MainLayout } from "@/src/layouts/MainLayout";
 import {
   ArrowRight,
   BookBookmark,
@@ -11,7 +12,6 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import Head from "next/head";
 import Link from "next/link";
-import { MainLayout } from "../layout";
 const features = [
   [
     "Mesclagem de Bases",
