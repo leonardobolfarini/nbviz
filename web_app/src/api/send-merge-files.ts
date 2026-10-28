@@ -6,6 +6,7 @@ interface MergeFilesProps {
   searchTerm?: string;
   limit?: number;
   outputFormat: "scopus" | "wos" | "openalex";
+  title: string;
 }
 
 export async function MergeFiles({
@@ -14,6 +15,7 @@ export async function MergeFiles({
   outputFormat,
   limit,
   searchTerm,
+  title,
 }: MergeFilesProps) {
   const formData = new FormData();
   if (scopusFile) formData.append("scopusFile", scopusFile);
@@ -21,35 +23,16 @@ export async function MergeFiles({
   if (searchTerm) formData.append("searchTerm", searchTerm);
   if (limit) formData.append("limit", String(limit));
   formData.append("outputFormat", outputFormat);
+  formData.append("title", title);
 
-  try {
-    const response = await api.post("/process", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+  const response = await fetch("/api/process", {
+    method: "POST",
+    body: formData,
+  });
 
-    if (!response.data?.files) {
-      throw new Error("A resposta do servidor está vazia ou inválida.");
-    }
-
-    return {
-      downloadWorksUrl: response.data.files.download_works_url,
-      downloadRemovedUrl: response.data.files.download_removed_url,
-      fileName: response.data.files.file_name,
-      venn: response.data.venn,
-    };
-  } catch (error: any) {
-    if (error.response) {
-      const message =
-        error.response.data?.message || "Erro no processamento do servidor.";
-      throw new Error(message);
-    } else if (error.request) {
-      throw new Error("Falha na comunicação com o servidor.");
-    } else {
-      throw new Error(
-        error.message || "Erro desconhecido ao enviar os arquivos.",
-      );
-    }
+  if (response.status != 202) {
+    return 500;
   }
+
+  return response.status;
 }
