@@ -45,11 +45,13 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   timeStyle: "short",
 });
 
-function formatDate(date: string) {
+function formatDate(date: string | null) {
+  if (!date) return "Aguardando conclusão";
   return dateFormatter.format(new Date(date));
 }
 
-function formatExpiration(expiresAt: string) {
+function formatExpiration(expiresAt: string | null) {
+  if (!expiresAt) return "Expiração será definida ao concluir";
   const expiresAtDate = new Date(expiresAt);
   const prefix = expiresAtDate.getTime() > Date.now() ? "Expira em" : "Expirada em";
 
@@ -157,8 +159,8 @@ export default function ProfilePage() {
             {[...analyses]
               .sort(
                 (firstAnalysis, secondAnalysis) =>
-                  new Date(secondAnalysis.created_at).getTime() -
-                  new Date(firstAnalysis.created_at).getTime(),
+                  new Date(secondAnalysis.created_at ?? 0).getTime() -
+                  new Date(firstAnalysis.created_at ?? 0).getTime(),
               )
               .map((a) => {
               const status = statusStyle[a.status];
@@ -254,7 +256,7 @@ export default function ProfilePage() {
                               {file.url.split("/").pop()}
                             </p>
                             <a
-                              href={`${process.env.NEXT_PUBLIC_API_URL}${file.url}`}
+                              href={`/api/proxy${file.url}`}
                               download
                               className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900"
                             >

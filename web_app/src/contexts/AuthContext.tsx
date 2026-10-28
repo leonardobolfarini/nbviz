@@ -18,8 +18,8 @@ type Analyses = {
   title: string;
   used_bases: string[];
   status: AnalysesStatus;
-  created_at: string;
-  expires_at: string;
+  created_at: string | null;
+  expires_at: string | null;
   download_url: string | null;
   removed_url: string | null;
   venn: VennRow[] | null;
