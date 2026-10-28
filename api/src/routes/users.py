@@ -15,15 +15,6 @@ from werkzeug.security import check_password_hash, generate_password_hash
 users_bp = Blueprint("users", __name__)
 
 
-@users_bp.route("/users", methods=["GET"])
-def get_users():
-    users = db.session.execute(db.select(Users).order_by(Users.email)).scalars().all()
-
-    users_data = [user.to_dict() for user in users]
-
-    return jsonify(users_data)
-
-
 @users_bp.route("/users/me", methods=["GET"])
 @jwt_required()
 def get_current_user():
@@ -32,7 +23,7 @@ def get_current_user():
     try:
         user = db.session.scalars(db.select(Users).where(Users.email == email)).one()
 
-        return jsonify({"id": str(user.id), "email": str(user.email)})
+        return jsonify(user.to_dict())
 
     except NoResultFound:
         return make_response(jsonify({"message": "user not found"}), 404)
@@ -148,7 +139,7 @@ def recover():
 
         Para criar uma nova senha, acesse o link abaixo dentro de 30 minutos:
 
-        {f"{os.getenv("FRONTEND_URL")}/redefinir-senha?token={token}"}
+        {f"{os.getenv('FRONTEND_URL')}/redefinir-senha?token={token}"}
 
         Se você não solicitou essa alteração, ignore este e-mail. Sua senha continuará a mesma.
 
