@@ -8,16 +8,17 @@ import {
   Warning,
 } from "@phosphor-icons/react/dist/ssr";
 import { useMutation } from "@tanstack/react-query";
+import type { GetServerSideProps } from "next";
 import Head from "next/head";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { GeneratedFile } from "./components/GeneratedFile";
 import { InputCard } from "./components/InputCard";
-import { VennSection, type VennRow } from "./components/VennSection";
 import { MainLayout } from "@/src/layouts/MainLayout";
+import { toast } from "sonner";
 
 const schema = z.object({
+  title: z.string().min(1, { message: "É obrigatório digitar um título." }),
   scopusFile: z.any().optional(),
   wosFile: z.any().optional(),
   searchTerm: z.string().optional(),
@@ -26,18 +27,52 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
+export const getServerSideProps: GetServerSideProps = async ({
+  req,
+  res,
+  resolvedUrl,
+}) => {
+  const token = req.cookies["nbviz.token"];
+
+  if (!token) {
+    return {
+      redirect: {
+        destination: `/login?next=${encodeURIComponent(resolvedUrl)}`,
+        permanent: false,
+      },
+    };
+  }
+
+  const response = await fetch(`${process.env.INTERNAL_API_URL}/users/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    res.setHeader(
+      "Set-Cookie",
+      "nbviz.token=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0",
+    );
+
+    return {
+      redirect: {
+        destination: `/login?next=${encodeURIComponent(resolvedUrl)}`,
+        permanent: false,
+      },
+    };
+  }
+
+  return { props: {} };
+};
+
 export default function MergePage() {
   const [selected, setSelected] = useState({
     scopus: true,
     wos: true,
     openalex: false,
   });
-  const [downloads, setDownloads] = useState<{
-    worksUrl: string;
-    removedUrl: string;
-    fileName: string;
-    venn: VennRow[];
-  } | null>(null);
+
   const {
     register,
     handleSubmit,
@@ -55,17 +90,12 @@ export default function MergePage() {
 
   const toggle = (key: keyof typeof selected) =>
     setSelected((old) => ({ ...old, [key]: !old[key] }));
-  useEffect(() => {
-    if (downloads)
-      document
-        .getElementById("generated")
-        ?.scrollIntoView({ behavior: "smooth" });
-  }, [downloads]);
 
   async function submit(data: FormData) {
     if (count < 2) return;
 
     const result = await mutateAsync({
+      title: data.title,
       scopusFile: selected.scopus ? data.scopusFile?.[0] : undefined,
       wosFile: selected.wos ? data.wosFile?.[0] : undefined,
       searchTerm: selected.openalex ? data.searchTerm : undefined,
@@ -73,12 +103,19 @@ export default function MergePage() {
       outputFormat: data.outputFormat,
     });
 
-    setDownloads({
-      worksUrl: result.downloadWorksUrl,
-      removedUrl: result.downloadRemovedUrl,
-      fileName: result.fileName,
-      venn: result.venn,
-    });
+    if (result == 500) {
+      toast.error(
+        "Não foi possível realizar a mesclagem, entre em contato com o suporte nbviz.suporte@gmail.com",
+        { richColors: true },
+      );
+
+      return;
+    }
+
+    toast.success(
+      'Mesclagem enviada para a fila. Esse processo pode levar alguns minutos. Acompanhe o progresso na página "Meu Perfil"',
+      { richColors: true },
+    );
   }
 
   return (
@@ -101,6 +138,19 @@ export default function MergePage() {
             Escolha pelo menos duas fontes para criar uma base unificada.
           </p>
         </header>
+        <label className="block max-w-xl text-sm font-medium text-slate-700">
+          Título da mesclagem
+          <input
+            className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            placeholder="Ex.: Produção científica sobre mudanças climáticas"
+            {...register("title")}
+          />
+          {errors.title && (
+            <span className="mt-1 block text-sm text-red-600">
+              {errors.title.message}
+            </span>
+          )}
+        </label>
         {count < 2 && (
           <div className="flex items-center gap-3 rounded-lg border border-orange-200 bg-orange-50 p-4 text-orange-800">
             <Warning size={23} /> Escolha pelo menos duas fontes para realizar a
@@ -219,7 +269,7 @@ export default function MergePage() {
                 .join(" + ")}
             </p>
           </div>
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+          <div className="flex w-full items-center flex-col gap-3 sm:w-auto sm:flex-row">
             <label className="text-sm text-slate-600">
               Formato de saída
               <select
@@ -242,29 +292,6 @@ export default function MergePage() {
           </div>
         </div>
         {errors.root && <p className="text-red-600">{errors.root.message}</p>}
-        {downloads && (
-          <section
-            id="generated"
-            className="rounded-xl border border-slate-200 bg-slate-100 p-5"
-          >
-            <h2 className="mb-4 text-xl font-semibold text-slate-800">
-              Arquivos gerados
-            </h2>
-            <div className="space-y-3">
-              <GeneratedFile
-                fileType="csv"
-                downloadUrl={downloads.worksUrl}
-                fileName={downloads.fileName}
-              />
-              <GeneratedFile
-                fileType="txt"
-                downloadUrl={downloads.removedUrl}
-                fileName={`removed_${downloads.fileName}`}
-              />
-            </div>
-          </section>
-        )}
-        {downloads && <VennSection rows={downloads.venn} />}
       </form>
     </MainLayout>
   );
