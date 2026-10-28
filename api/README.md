@@ -156,7 +156,7 @@ A resposta é `202 Accepted` e contém os identificadores da análise e do job. 
 }
 ```
 
-Quando concluída, a análise inclui `download_url`, `removed_url`, `venn`, `created_at` e `expires_at`. Os arquivos são removidos automaticamente após o período de retenção.
+Enquanto estiver pendente ou em processamento, `created_at` e `expires_at` são `null`. Ao concluir, ambos são definidos a partir daquele momento; os arquivos são removidos automaticamente após o período de retenção.
 
 ### Redes bibliométricas
 

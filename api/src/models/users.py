@@ -5,7 +5,6 @@ from typing import Any
 from sqlalchemy import DateTime, Enum, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.sql.functions import now
 from sqlalchemy.types import UUID
 from src.extensions.database import db
 
@@ -55,15 +54,14 @@ class Analyses(db.Model):
     download_url: Mapped[str | None] = mapped_column(nullable=True)
     removed_url: Mapped[str | None] = mapped_column(nullable=True)
     venn: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
+    created_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
-        server_default=now(),
-        nullable=False,
+        nullable=True,
     )
 
-    expires_at: Mapped[datetime] = mapped_column(
+    expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
-        nullable=False,
+        nullable=True,
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("user_account.id"), nullable=False
@@ -83,6 +81,6 @@ class Analyses(db.Model):
             "download_url": self.download_url,
             "removed_url": self.removed_url,
             "venn": self.venn,
-            "created_at": self.created_at.isoformat(),
-            "expires_at": self.expires_at.isoformat(),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
         }

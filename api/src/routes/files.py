@@ -1,7 +1,6 @@
 import os
 import shutil
 import uuid
-from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 from flask import Blueprint, jsonify, make_response, request, send_file
@@ -130,7 +129,6 @@ def process_files():
         analyse = Analyses(
             title=analyse_title,
             used_bases=used_bases,
-            expires_at=datetime.now(timezone.utc) + timedelta(hours=3),
             user_id=user.id,
         )
         db.session.add(analyse)
