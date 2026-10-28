@@ -12,7 +12,7 @@ export function GeneratedFile({
   const Icon = fileType === "csv" ? FileCsv : FileTxt;
   const href = downloadUrl.startsWith("http")
     ? downloadUrl
-    : `${process.env.NEXT_PUBLIC_API_URL}${downloadUrl}`;
+    : `/api/proxy${downloadUrl}`;
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-slate-300 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-2">

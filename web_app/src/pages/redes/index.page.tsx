@@ -195,7 +195,7 @@ export default function Graph() {
             {edges && nodes && downloadUrl && (
               <span>
                 <a
-                  href={`${process.env.NEXT_PUBLIC_API_URL}${downloadUrl}`}
+                  href={`/api/proxy${downloadUrl}`}
                   className="flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-white"
                 >
                   <Download size={20} />
