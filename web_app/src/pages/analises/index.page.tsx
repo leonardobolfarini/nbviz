@@ -12,7 +12,6 @@ import Head from "next/head";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { MainLayout } from "../layout";
 import {
   AuthorsCountInterface,
   KeywordsCountInterface,
@@ -21,6 +20,7 @@ import {
 } from "@/src/lib/types";
 import { ChartBarComponent } from "./components/ChartBarComponent";
 import { ChartLineComponent } from "./components/ChartLineComponent";
+import { MainLayout } from "@/src/layouts/MainLayout";
 const schema = z.object({
   chartBarFile: z
     .any()
@@ -141,76 +141,82 @@ export default function Charts() {
         </form>
         {hasResults ? (
           <>
-        <section className="rounded-xl border border-slate-200 bg-slate-100 p-4 sm:p-6">
-          <div className="mb-5">
-            <h2 className="flex items-center gap-2 text-xl font-semibold text-slate-800">
-              <ChartBar className="text-blue-600" /> Gráficos de distribuição
-            </h2>
-            <p className="text-sm text-slate-500">
-              Análise quantitativa por categorias
-            </p>
-          </div>
-          <div id="chartContainer" className="grid gap-4">
-            {chartCards.map(([title, data, filename, field]) => (
-              <div
-                key={title}
-                className="rounded-lg border border-slate-200 bg-white p-4"
-              >
-                <ChartBarComponent
-                  dataListName={title}
-                  chartBarData={[...data]
-                    .sort((a, b) => b.count - a.count)
-                    .slice(0, 10)
-                    .map((item) => ({ name: item.label, count: item.count }))}
-                />
-                {data.length > 0 && (
-                  <DownloadButton
-                    onClick={() => exportToCSV(data, filename, field)}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-        <section className="rounded-xl border border-slate-200 bg-slate-100 p-4 sm:p-6">
-          <div className="mb-5">
-            <h2 className="flex items-center gap-2 text-xl font-semibold text-slate-800">
-              <ChartLine className="text-purple-600" /> Evolução temporal
-            </h2>
-            <p className="text-sm text-slate-500">
-              Tendências e padrões ao longo do tempo
-            </p>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            {years ? (
-              <>
-                <ChartLineComponent
-                  dataListName="Últimos 10 anos"
-                  chartBarData={[...years.years]
-                    .sort((a, b) => Number(a.label) - Number(b.label))
-                    .slice(-10)
-                    .map((item) => ({
-                      name: String(item.label),
-                      count: item.count,
-                    }))}
-                />
-                <DownloadButton
-                  onClick={() => exportToCSV(years.years, "full_years", "year")}
-                />
-              </>
-            ) : (
-              <div className="flex h-80 flex-col items-center justify-center gap-3 text-center text-slate-400">
-                <ChartLine size={54} />
-                <h3 className="text-lg font-medium">
-                  Gráfico de linha temporal
-                </h3>
-                <p className="text-sm">
-                  Os dados de evolução temporal aparecerão aqui.
+            <section className="rounded-xl border border-slate-200 bg-slate-100 p-4 sm:p-6">
+              <div className="mb-5">
+                <h2 className="flex items-center gap-2 text-xl font-semibold text-slate-800">
+                  <ChartBar className="text-blue-600" /> Gráficos de
+                  distribuição
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Análise quantitativa por categorias
                 </p>
               </div>
-            )}
-          </div>
-        </section>
+              <div id="chartContainer" className="grid gap-4">
+                {chartCards.map(([title, data, filename, field]) => (
+                  <div
+                    key={title}
+                    className="rounded-lg border border-slate-200 bg-white p-4"
+                  >
+                    <ChartBarComponent
+                      dataListName={title}
+                      chartBarData={[...data]
+                        .sort((a, b) => b.count - a.count)
+                        .slice(0, 10)
+                        .map((item) => ({
+                          name: item.label,
+                          count: item.count,
+                        }))}
+                    />
+                    {data.length > 0 && (
+                      <DownloadButton
+                        onClick={() => exportToCSV(data, filename, field)}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+            <section className="rounded-xl border border-slate-200 bg-slate-100 p-4 sm:p-6">
+              <div className="mb-5">
+                <h2 className="flex items-center gap-2 text-xl font-semibold text-slate-800">
+                  <ChartLine className="text-purple-600" /> Evolução temporal
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Tendências e padrões ao longo do tempo
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                {years ? (
+                  <>
+                    <ChartLineComponent
+                      dataListName="Últimos 10 anos"
+                      chartBarData={[...years.years]
+                        .sort((a, b) => Number(a.label) - Number(b.label))
+                        .slice(-10)
+                        .map((item) => ({
+                          name: String(item.label),
+                          count: item.count,
+                        }))}
+                    />
+                    <DownloadButton
+                      onClick={() =>
+                        exportToCSV(years.years, "full_years", "year")
+                      }
+                    />
+                  </>
+                ) : (
+                  <div className="flex h-80 flex-col items-center justify-center gap-3 text-center text-slate-400">
+                    <ChartLine size={54} />
+                    <h3 className="text-lg font-medium">
+                      Gráfico de linha temporal
+                    </h3>
+                    <p className="text-sm">
+                      Os dados de evolução temporal aparecerão aqui.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </section>
           </>
         ) : (
           <section className="flex min-h-80 flex-col items-center justify-center rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
@@ -219,8 +225,8 @@ export default function Charts() {
               Seus gráficos aparecerão aqui
             </h2>
             <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
-              Selecione uma base bibliográfica acima e clique em “Analisar”
-              para gerar as distribuições e a evolução temporal.
+              Selecione uma base bibliográfica acima e clique em “Analisar” para
+              gerar as distribuições e a evolução temporal.
             </p>
           </section>
         )}
