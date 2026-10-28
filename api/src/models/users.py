@@ -35,8 +35,6 @@ class Users(db.Model):
         return {
             "id": str(self.id),
             "email": self.email,
-            "password_reset_token_hash": self.password_reset_token_hash,
-            "password_reset_expires_at": self.password_reset_expires_at,
             "analyses": [analysis.to_dict() for analysis in self.analyses],
         }
 
@@ -47,6 +45,8 @@ class Analyses(db.Model):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
+    title: Mapped[str]
+    used_bases: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
     status: Mapped[str] = mapped_column(
         Enum("pending", "finished", "processing", "error", name="status"),
         nullable=False,
@@ -77,6 +77,8 @@ class Analyses(db.Model):
     def to_dict(self):
         return {
             "id": str(self.id),
+            "title": self.title,
+            "used_bases": self.used_bases,
             "status": self.status,
             "download_url": self.download_url,
             "removed_url": self.removed_url,

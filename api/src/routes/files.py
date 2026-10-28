@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, jsonify, make_response, request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from src.extensions.database import db
 from src.extensions.queue import processing_queue
@@ -89,6 +89,7 @@ def process_files():
     current_user = get_jwt_identity()
     user = db.session.scalars(db.select(Users).where(Users.email == current_user)).one()
 
+    analyse_title = request.form.get("title")
     scopus_file = request.files.get("scopusFile")
     wos_file = request.files.get("wosFile")
     openalex_search = request.form.get("searchTerm")
@@ -100,22 +101,35 @@ def process_files():
             'The property "outputFormat" is required to generate the output.'
         )
     if output_format not in {"scopus", "openalex", "wos"}:
-        return jsonify({"message": "Unsupported output format."}), 400
+        return make_response(jsonify({"message": "Unsupported output format."}), 400)
 
     source_count = sum(
         bool(source) for source in (scopus_file, wos_file, openalex_search)
     )
     if source_count <= 1:
-        return jsonify(
-            {
-                "message": "Is required two or more databases to realize the concatenation."
-            }
-        ), 400
+        return make_response(
+            jsonify(
+                {
+                    "message": "Is required two or more databases to realize the concatenation."
+                }
+            ),
+            400,
+        )
+
+    used_bases = []
+    if scopus_file:
+        used_bases.append("Scopus")
+    if wos_file:
+        used_bases.append("Web of Science")
+    if openalex_search:
+        used_bases.append("OpenAlex")
 
     analyse = None
     input_folder = None
     try:
         analyse = Analyses(
+            title=analyse_title,
+            used_bases=used_bases,
             expires_at=datetime.now(timezone.utc) + timedelta(hours=3),
             user_id=user.id,
         )
@@ -145,13 +159,16 @@ def process_files():
             limit,
             input_folder,
         )
-        return jsonify(
-            {
-                "id": str(analyse.id),
-                "job_id": job.id,
-                "status": analyse.status,
-            }
-        ), 202
+        return make_response(
+            jsonify(
+                {
+                    "id": str(analyse.id),
+                    "job_id": job.id,
+                    "status": analyse.status,
+                }
+            ),
+            202,
+        )
 
     except Exception as e:
         db.session.rollback()
@@ -162,4 +179,6 @@ def process_files():
                 db.session.commit()
         if input_folder:
             shutil.rmtree(input_folder, ignore_errors=True)
-        return jsonify({"message": f"Error trying to concat the files: {str(e)}"}), 500
+        return make_response(
+            jsonify({"message": f"Error trying to concat the files: {str(e)}"}), 500
+        )
