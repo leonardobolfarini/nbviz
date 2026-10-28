@@ -6,9 +6,29 @@ import {
   type ReactNode,
 } from "react";
 
+type AnalysesStatus = "pending" | "finished" | "processing" | "error";
+
+type VennRow = {
+  combination: string;
+  count: number;
+};
+
+type Analyses = {
+  id: string;
+  title: string;
+  used_bases: string[];
+  status: AnalysesStatus;
+  created_at: string;
+  expires_at: string;
+  download_url: string | null;
+  removed_url: string | null;
+  venn: VennRow[] | null;
+};
+
 type User = {
   id: string;
   email: string;
+  analyses: Analyses[];
 };
 
 type AuthContextData = {
