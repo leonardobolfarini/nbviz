@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 import src.models
 from dotenv import load_dotenv
@@ -20,17 +21,20 @@ load_dotenv()
 
 CORS(app)
 
-os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-
-if os.getenv("START_FILE_CLEANUP", "true").lower() == "true":
-    start_cleanup_thread(OUTPUT_FOLDER, FILE_TTL_SECONDS)
-
 app.config["SQLALCHEMY_DATABASE_URI"] = database_uri
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_KEY")
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(
+    days=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES_DAYS", "7"))
+)
 
 db.init_app(app)
 migrate = Migrate(app, db)
 jwt = JWTManager(app)
+
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+
+if os.getenv("START_FILE_CLEANUP", "true").lower() == "true":
+    start_cleanup_thread(app, OUTPUT_FOLDER, FILE_TTL_SECONDS)
 
 app.register_blueprint(files_bp)
 app.register_blueprint(analytics_bp)
