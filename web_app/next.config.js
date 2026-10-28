@@ -2,6 +2,10 @@
 const nextConfig = {
   output: "standalone",
 
+  experimental: {
+    agentUpgrade: "security",
+  },
+
   pageExtensions: ["page.tsx", "page.ts"],
 
   env: {
