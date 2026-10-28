@@ -3,9 +3,11 @@ import {
   ArrowRight,
   BookBookmark,
   ChartBar,
+  ClockCountdown,
   Database,
   GithubLogo,
   Info,
+  LockKey,
   Network,
   Package,
   Stack,
@@ -89,6 +91,44 @@ export default function Home() {
               bibliográficos e gerar análises estatísticas e redes de coautoria,
               apoiando pesquisas científicas com rigor e eficiência.
             </p>
+          </div>
+        </section>
+        <section>
+          <h2 className="mb-4 text-2xl font-semibold text-slate-800">
+            Acesso e processamento
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-3 text-blue-600">
+                <span className="flex size-11 items-center justify-center rounded-full bg-blue-50">
+                  <LockKey size={24} weight="duotone" />
+                </span>
+                <h3 className="text-lg font-semibold text-slate-800">
+                  Login para mesclagens
+                </h3>
+              </div>
+              <p className="mt-4 leading-7 text-slate-600">
+                É necessário criar uma conta e entrar no NBVIZ para enviar uma
+                mesclagem. Isso associa os resultados ao seu perfil e mantém os
+                arquivos disponíveis apenas para a sua consulta.
+              </p>
+            </article>
+            <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-3 text-emerald-600">
+                <span className="flex size-11 items-center justify-center rounded-full bg-emerald-50">
+                  <ClockCountdown size={24} weight="duotone" />
+                </span>
+                <h3 className="text-lg font-semibold text-slate-800">
+                  Mesclagem em segundo plano
+                </h3>
+              </div>
+              <p className="mt-4 leading-7 text-slate-600">
+                Após o envio, a mesclagem é adicionada a uma fila e processada
+                em segundo plano. Você pode continuar navegando e acompanhar o
+                status, os arquivos para download e o diagrama de Venn em Meu
+                Perfil.
+              </p>
+            </article>
           </div>
         </section>
         <section>
