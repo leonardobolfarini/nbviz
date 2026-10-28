@@ -1,6 +1,7 @@
 import logging
 import os
 import shutil
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from main import app
@@ -11,6 +12,8 @@ from src.utils.constants import (
     HEADER_WOS,
     OPENALEX_TO_SCOPUS,
     OUTPUT_FOLDER,
+    SCOPUS_TO_OPENALEX,
+    SCOPUS_TO_WOS,
     WOS_TO_SCOPUS,
 )
 
@@ -82,6 +85,13 @@ def process_analysis(
                 ["Title", "Year"],
             )
 
+            if output_format == "wos":
+                merged_data = merged_data.rename(SCOPUS_TO_WOS)
+                removed_merged_data = removed_merged_data.rename(SCOPUS_TO_WOS)
+            elif output_format == "openalex":
+                merged_data = merged_data.rename(SCOPUS_TO_OPENALEX)
+                removed_merged_data = removed_merged_data.rename(SCOPUS_TO_OPENALEX)
+
             os.makedirs(OUTPUT_FOLDER, exist_ok=True)
             output_name = f"all_in_one_{analysis.id}.{extension}"
             removed_name = f"removed_{analysis.id}.{extension}"
@@ -93,6 +103,9 @@ def process_analysis(
             analysis.download_url = f"/download/{output_name}"
             analysis.removed_url = f"/download/{removed_name}"
             analysis.venn = venn_df.to_dicts()
+            completed_at = datetime.now(timezone.utc)
+            analysis.created_at = completed_at
+            analysis.expires_at = completed_at + timedelta(hours=3)
             analysis.status = "finished"
             db.session.commit()
         except Exception:

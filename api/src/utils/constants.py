@@ -47,6 +47,8 @@ OPENALEX_TO_SCOPUS = {
     "References": "References",
 }
 
+SCOPUS_TO_OPENALEX = {target: source for source, target in OPENALEX_TO_SCOPUS.items()}
+
 LABEL_MAP = {
     "AU": "authors",
     "Authors": "authors",
