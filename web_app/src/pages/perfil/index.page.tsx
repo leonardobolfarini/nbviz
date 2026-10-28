@@ -15,56 +15,14 @@ import { useAuth } from "../../contexts/AuthContext";
 import { DeleteAccountDialog } from "./components/dialog";
 import { PerfilFallback } from "./components/fallback";
 import { MainLayout } from "@/src/layouts/MainLayout";
-
-type AnalysisStatus = "finished" | "processing" | "error";
-
-type Analysis = {
-  id: string;
-  title: string;
-  sources: string;
-  createdAt: string;
-  expiresIn: string;
-  status: AnalysisStatus;
-  files?: {
-    name: string;
-    size: string;
-    type: "Mesclagem" | "Removidos" | "Venn";
-  }[];
-};
-
-const analyses: Analysis[] = [
-  {
-    id: "analise-1",
-    title: "Mesclagem Scopus + Web of Science",
-    sources: "Scopus · Web of Science",
-    createdAt: "26 set. 2026, 14:32",
-    expiresIn: "2h 18min",
-    status: "finished",
-    files: [
-      { name: "all_in_one_8f3c.csv", size: "1,8 MB", type: "Mesclagem" },
-      { name: "removed_8f3c.csv", size: "324 KB", type: "Removidos" },
-      { name: "venn_8f3c.json", size: "3 KB", type: "Venn" },
-    ],
-  },
-  {
-    id: "analise-2",
-    title: "Produção científica sobre IA na educação",
-    sources: "Scopus · OpenAlex",
-    createdAt: "26 set. 2026, 14:48",
-    expiresIn: "—",
-    status: "processing",
-  },
-  {
-    id: "analise-3",
-    title: "Redes de colaboração em saúde pública",
-    sources: "Web of Science · OpenAlex",
-    createdAt: "26 set. 2026, 12:03",
-    expiresIn: "Expirada em breve",
-    status: "error",
-  },
-];
+import { VennSection } from "@/src/components/VennSection";
 
 const statusStyle = {
+  pending: {
+    label: "Na fila",
+    className: "bg-slate-100 text-slate-700",
+    icon: ClockCountdown,
+  },
   finished: {
     label: "Concluída",
     className: "bg-emerald-50 text-emerald-700",
@@ -81,6 +39,22 @@ const statusStyle = {
     icon: WarningCircle,
   },
 };
+
+const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+function formatDate(date: string) {
+  return dateFormatter.format(new Date(date));
+}
+
+function formatExpiration(expiresAt: string) {
+  const expiresAtDate = new Date(expiresAt);
+  const prefix = expiresAtDate.getTime() > Date.now() ? "Expira em" : "Expirada em";
+
+  return `${prefix} ${formatDate(expiresAt)}`;
+}
 
 export const getServerSideProps: GetServerSideProps = async ({
   req,
@@ -128,6 +102,8 @@ export default function ProfilePage() {
   if (!user) {
     return <PerfilFallback />;
   }
+
+  const { analyses } = user;
 
   return (
     <MainLayout>
@@ -178,19 +154,42 @@ export default function ProfilePage() {
           </div>
 
           <div className="divide-y divide-slate-200">
-            {analyses.map((analysis) => {
-              const status = statusStyle[analysis.status];
+            {[...analyses]
+              .sort(
+                (firstAnalysis, secondAnalysis) =>
+                  new Date(secondAnalysis.created_at).getTime() -
+                  new Date(firstAnalysis.created_at).getTime(),
+              )
+              .map((a) => {
+              const status = statusStyle[a.status];
               const StatusIcon = status.icon;
-              const isOpen = openAnalysis === analysis.id;
-              const canDownload = analysis.status === "finished";
+              const isOpen = openAnalysis === a.id;
+              const files = [
+                a.download_url && {
+                  label: "Mesclagem",
+                  url: a.download_url,
+                },
+                a.removed_url && {
+                  label: "Registros removidos",
+                  url: a.removed_url,
+                },
+              ].filter(
+                (
+                  file,
+                ): file is {
+                  label: string;
+                  url: string;
+                } => Boolean(file),
+              );
+              const canDownload = files.length > 0;
 
               return (
-                <article key={analysis.id} className="px-6 py-5">
+                <article key={a.id} className="px-6 py-5">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="truncate font-semibold text-slate-800">
-                          {analysis.title}
+                          {a.title}
                         </h3>
                         <span
                           className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}
@@ -198,21 +197,20 @@ export default function ProfilePage() {
                           <StatusIcon
                             size={14}
                             className={
-                              analysis.status === "processing"
-                                ? "animate-spin"
-                                : ""
+                              a.status === "processing" ? "animate-spin" : ""
                             }
                           />
                           {status.label}
                         </span>
                       </div>
                       <p className="mt-1 text-sm text-slate-500">
-                        {analysis.sources}
+                        {a.used_bases.join(" · ")}
                       </p>
                       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate-500">
-                        <span>Criada em {analysis.createdAt}</span>
+                        <span>Criada em {formatDate(a.created_at)}</span>
                         <span className="inline-flex items-center gap-1">
-                          <ClockCountdown size={16} /> {analysis.expiresIn}
+                          <ClockCountdown size={16} />{" "}
+                          {formatExpiration(a.expires_at)}
                         </span>
                       </div>
                     </div>
@@ -220,9 +218,7 @@ export default function ProfilePage() {
                     <button
                       type="button"
                       disabled={!canDownload}
-                      onClick={() =>
-                        setOpenAnalysis(isOpen ? null : analysis.id)
-                      }
+                      onClick={() => setOpenAnalysis(isOpen ? null : a.id)}
                       className="inline-flex w-fit items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
                     >
                       {canDownload ? "Ver arquivos" : "Aguardando resultado"}
@@ -237,41 +233,51 @@ export default function ProfilePage() {
                     </button>
                   </div>
 
-                  {isOpen && analysis.files && (
-                    <div className="mt-5 grid gap-3 border-t border-slate-100 pt-5 md:grid-cols-3">
-                      {analysis.files.map((file) => (
-                        <div
-                          key={file.name}
-                          className="rounded-lg bg-slate-50 p-4"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <File
-                              size={22}
-                              className="shrink-0 text-blue-600"
-                            />
-                            <span className="rounded bg-white px-2 py-1 text-xs font-medium text-slate-500">
-                              {file.type}
-                            </span>
-                          </div>
-                          <p className="mt-4 truncate text-sm font-semibold text-slate-700">
-                            {file.name}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            {file.size}
-                          </p>
-                          <button
-                            type="button"
-                            className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900"
+                  {isOpen && (
+                    <div className="mt-5 space-y-5 border-t border-slate-100 pt-5">
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {files.map((file) => (
+                          <div
+                            key={file.url}
+                            className="rounded-lg bg-slate-50 p-4"
                           >
-                            <DownloadSimple size={17} /> Baixar
-                          </button>
-                        </div>
-                      ))}
+                            <div className="flex items-start justify-between gap-3">
+                              <File
+                                size={22}
+                                className="shrink-0 text-blue-600"
+                              />
+                              <span className="rounded bg-white px-2 py-1 text-xs font-medium text-slate-500">
+                                {file.label}
+                              </span>
+                            </div>
+                            <p className="mt-4 truncate text-sm font-semibold text-slate-700">
+                              {file.url.split("/").pop()}
+                            </p>
+                            <a
+                              href={`${process.env.NEXT_PUBLIC_API_URL}${file.url}`}
+                              download
+                              className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900"
+                            >
+                              <DownloadSimple size={17} /> Baixar
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+
+                      {a.venn && a.venn.length > 0 && (
+                        <VennSection rows={a.venn} />
+                      )}
                     </div>
                   )}
                 </article>
               );
-            })}
+              })}
+
+            {analyses.length === 0 && (
+              <p className="px-6 py-10 text-center text-sm text-slate-500">
+                Você ainda não tem nenhuma mesclagem.
+              </p>
+            )}
           </div>
         </section>
       </div>
