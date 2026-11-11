@@ -52,7 +52,7 @@ scopus_processed = st.process_scopus_data(scopus, header_csv)
 
 ## Merge de arquivos de mesma base
 
-Se você possui vários arquivos exportados da mesma plataforma (por exemplo, múltiplos arquivos `.csv` da Scopus ou vários `.txt` da Web of Science) e deseja unificá-los de forma extremamente performática utilizando o motor *Lazy* do Polars:
+Se você possui vários arquivos exportados da mesma plataforma (por exemplo, múltiplos arquivos `.csv` da Scopus ou vários `.txt` da Web of Science) e deseja unificá-los de forma extremamente performática utilizando o motor _Lazy_ do Polars:
 
 ```python
 import scientometric_tools as st
@@ -128,17 +128,21 @@ graph = st.graph_formatter(merged, "Authors")
 
 ## Referência da API
 
-| Função | Descrição |
-|---|---|
-| `read_wos_file(file)` | Lê o arquivo extraído da base de dados Web of Science |
-| `read_scopus_file(file)` | Lê o arquivo extraído da base de dados Scopus |
-| `keep_columns(df, columns)` | Seleciona colunas, normaliza strings e trata nulos |
-| `process_wos_data(df, header)` | Processa e padroniza dados do Web of Science |
-| `process_scopus_data(df, header)` | Processa e padroniza dados do Scopus |
-| `merge_same_database(lazyframes)` | Funde múltiplos LazyFrames da mesma base de dados de forma otimizada |
-| `merge_and_process(target, visitor, mapping, subset_cols)` | Merge entre bases com deduplicação por DOI |
-| `get_counts(df, column, output_key, separators)` | Contagem de termos para gráficos |
-| `graph_formatter(df, column, separators)` | Gera estrutura de grafo de coautoria ou co-ocorrência |
+| Função                                                     | Descrição                                                                            |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `read_wos_file(file)`                                      | Lê o arquivo extraído da base de dados Web of Science                                |
+| `read_scopus_file(file)`                                   | Lê o arquivo extraído da base de dados Scopus                                        |
+| `keep_columns(df, columns)`                                | Seleciona colunas, normaliza strings e trata nulos                                   |
+| `process_wos_data(df, header)`                             | Processa e padroniza dados do Web of Science                                         |
+| `process_scopus_data(df, header)`                          | Processa e padroniza dados do Scopus                                                 |
+| `merge_same_database(lazyframes)`                          | Funde múltiplos LazyFrames da mesma base de dados de forma otimizada                 |
+| `merge_and_process(target, visitor, mapping, subset_cols)` | Merge entre bases com deduplicação por DOI                                           |
+| `get_counts(df, column, output_key, separators)`           | Contagem de termos para gráficos                                                     |
+| `graph_formatter(df, column, separators)`                  | Gera estrutura de grafo de coautoria ou co-ocorrência                                |
+| `oa_name_format(name)`                                     | Padronização do campo de autores advindo da OpenAlex                                 |
+| `construct_abstract(inverted_index)`                       | Gera o resumo dos artigos da OpenAlex com base no índice advindo da API              |
+| `format_openalex_response(article)`                        | Constrói o retorno das informações relevantes dos artigos da OpenAlex                |
+| `fetch_openalex_works(search_term, api_key, limit)`        | Faz uma busca com base no texto passado para função e retorna os artigos da OpenAlex |
 
 ---
 
@@ -152,4 +156,4 @@ graph = st.graph_formatter(merged, "Authors")
 
 ## Projeto
 
-Desenvolvido por **Leonardo Neves Bolfarini** sob orientação do prof. **Rafael Gutierres Castanha** na **Universidade de Marília (UNIMAR)**.
+Desenvolvido por **Leonardo Neves Bolfarini** sob orientação do Prof. Dr. **Rafael Gutierres Castanha** na **Universidade de Marília (UNIMAR)**.

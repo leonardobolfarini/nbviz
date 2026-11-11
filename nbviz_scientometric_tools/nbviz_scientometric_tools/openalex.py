@@ -65,22 +65,30 @@ def fetch_openalex_works(
     return pl.DataFrame(results)
 
 
+def oa_name_format(name: str):
+    parts = name.lower().split()
+    if not parts:
+        return ""
+
+    lastnames = parts[-1]
+    initials = " ".join(f"{part[0]}." for part in parts[:-1])
+    return f"{lastnames} {initials}"
+
+
 def format_openalex_response(article):
     primary_loc = article.get("primary_location") or {}
     source_obj = primary_loc.get("source") or {}
-    source_name = (
-        source_obj.get("display_name") if isinstance(source_obj, dict) else None
-    )
+    source_name = source_obj.get("display_name").lower() if source_obj else None
 
     authors_list = [
-        author.get("author", {}).get("display_name")
+        oa_name_format(author.get("author", {}).get("display_name"))
         for author in article.get("authorships", [])
         if author.get("author") and author.get("author", {}).get("display_name")
     ]
     authors_str = "; ".join(authors_list).lower().strip() if authors_list else None
 
     keywords_list = [
-        keyword.get("display_name")
+        keyword.get("display_name").lower()
         for keyword in article.get("keywords", [])
         if keyword.get("display_name")
     ]

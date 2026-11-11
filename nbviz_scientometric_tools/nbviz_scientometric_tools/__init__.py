@@ -9,4 +9,9 @@ from .analysis import (
 )
 from .count_data import get_counts
 from .graph import graph_formatter
-from .openalex import construct_abstract, fetch_openalex_works, format_openalex_response
+from .openalex import (
+    construct_abstract,
+    fetch_openalex_works,
+    format_openalex_response,
+    oa_name_format,
+)
