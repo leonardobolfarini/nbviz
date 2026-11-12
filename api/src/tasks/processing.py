@@ -7,6 +7,7 @@ from uuid import UUID
 from main import app
 from src.extensions.database import db
 from src.models.users import Analyses
+from src.utils.openalex_key import decrypt_openalex_key
 from src.utils.constants import (
     HEADER_SCOPUS,
     HEADER_WOS,
@@ -57,11 +58,17 @@ def process_analysis(
                 dfs_to_concat.append(wos_df.rename(WOS_TO_SCOPUS))
 
             if openalex_search:
-                openalex_df = st.fetch_openalex_works(
-                    openalex_search,
-                    os.getenv("OPENALEX_API_KEY"),
-                    limit=limit,
-                )
+                encrypted_key = analysis.user.openalex_api_key_encrypted
+                if not encrypted_key:
+                    raise ValueError("OpenAlex API key is required.")
+                key = decrypt_openalex_key(encrypted_key)
+                try:
+                    openalex_df = st.fetch_openalex_works(
+                        openalex_search, key, limit=limit
+                    )
+                except Exception:
+                    # The client may include the API key in an exception URL.
+                    raise RuntimeError("OpenAlex search failed") from None
                 dfs_to_concat.append(openalex_df.rename(OPENALEX_TO_SCOPUS))
 
             if len(dfs_to_concat) <= 1:

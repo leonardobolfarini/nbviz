@@ -4,12 +4,14 @@ import smtplib
 from datetime import UTC, datetime, timedelta
 from email.message import EmailMessage
 
+import requests
 from flask import Blueprint, jsonify, make_response, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from pandas.io.stata import os
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from src.extensions.database import db
 from src.models.users import Users
+from src.utils.openalex_key import encrypt_openalex_key
 from werkzeug.security import check_password_hash, generate_password_hash
 
 users_bp = Blueprint("users", __name__)
@@ -189,3 +191,45 @@ def change_password():
     db.session.commit()
 
     return make_response(jsonify({"message": "password changed successfully"}), 200)
+
+
+@users_bp.route("/users/openalex/update", methods=["PATCH"])
+@jwt_required()
+def openalex_api_key_update():
+    data = request.get_json(silent=True) or {}
+    key = data.get("openalex_key") if isinstance(data, dict) else None
+    if not isinstance(key, str) or not key.strip():
+        return make_response(jsonify({"message": "key is required"}), 400)
+
+    key = key.strip()
+    try:
+        response = requests.get(
+            "https://api.openalex.org/works",
+            headers={"Authorization": f"Bearer {key}"},
+            params={"per_page": 1},
+            timeout=10,
+        )
+    except requests.RequestException:
+        return make_response(jsonify({"message": "could not reach OpenAlex"}), 502)
+
+    if response.status_code == 401:
+        return make_response(
+            jsonify({"message": "invalid OpenAlex key", "code": "invalid_key"}), 400
+        )
+    if response.status_code == 429:
+        return make_response(
+            jsonify({"message": "OpenAlex usage limit reached", "code": "rate_limited"}), 429
+        )
+    if response.status_code != 200:
+        return make_response(jsonify({"message": "could not validate OpenAlex key"}), 503)
+
+    email = get_jwt_identity()
+    user = db.session.scalars(db.select(Users).where(Users.email == email)).one()
+    key_hash = hashlib.sha256(key.encode()).hexdigest()
+
+    user.openalex_api_key_encrypted = encrypt_openalex_key(key)
+    user.openalex_api_key_hash = key_hash
+
+    db.session.commit()
+
+    return make_response(jsonify({"message": "key saved successfully"}), 200)

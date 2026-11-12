@@ -16,6 +16,7 @@ import { z } from "zod";
 import { InputCard } from "./components/InputCard";
 import { MainLayout } from "@/src/layouts/MainLayout";
 import { toast } from "sonner";
+import { useAuth } from "@/src/contexts/AuthContext";
 
 const schema = z.object({
   title: z.string().min(1, { message: "É obrigatório digitar um título." }),
@@ -67,6 +68,8 @@ export const getServerSideProps: GetServerSideProps = async ({
 };
 
 export default function MergePage() {
+  const { user } = useAuth();
+
   const [selected, setSelected] = useState({
     scopus: true,
     wos: true,
@@ -222,6 +225,7 @@ export default function MergePage() {
           </InputCard>
           <InputCard
             title="OpenAlex"
+            disabled={!user?.has_key}
             color="border-green-500"
             isSelected={selected.openalex}
             setSelect={() => toggle("openalex")}

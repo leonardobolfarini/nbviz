@@ -33,8 +33,6 @@ No Windows (PowerShell):
 Copy-Item .env.example .env
 ```
 
-Não versione o `.env`. Em produção, defina as mesmas variáveis no ambiente ou no gerenciador de segredos utilizado pela infraestrutura.
-
 ## Banco de dados
 
 Com o PostgreSQL em execução e o `.env` configurado, aplique as migrações:
@@ -111,30 +109,30 @@ Authorization: Bearer <access_token>
 
 ## Endpoints
 
-| Método | Rota | Autenticação | Descrição |
-| --- | --- | --- | --- |
-| `GET` | `/users` | Não | Lista usuários e suas análises. |
-| `POST` | `/users/create` | Não | Cria uma conta. Corpo JSON: `email`, `password`. |
-| `POST` | `/users/login` | Não | Retorna um token de acesso JWT. Corpo JSON: `email`, `password`. |
-| `GET` | `/users/me` | JWT | Retorna o usuário autenticado. |
-| `POST` | `/unify_files` | Não | Junta vários arquivos da mesma base. Multipart: `files`, `databaseType` (`scopus` ou `wos`). |
-| `POST` | `/process` | JWT | Cria uma análise assíncrona combinando fontes diferentes. |
-| `GET` | `/analyses/<analysis_id>` | JWT | Consulta o estado e os resultados de uma análise do usuário. |
-| `GET` | `/download/<file_name>` | Não | Baixa um arquivo gerado que ainda não expirou. |
-| `POST` | `/graph` | Não | Gera uma rede de coautoria ou palavras-chave. |
-| `POST` | `/chart_bar` | Não | Retorna contagens para gráficos de barras. |
+| Método | Rota                      | Autenticação | Descrição                                                                                    |
+| ------ | ------------------------- | ------------ | -------------------------------------------------------------------------------------------- |
+| `GET`  | `/users`                  | Não          | Lista usuários e suas análises.                                                              |
+| `POST` | `/users/create`           | Não          | Cria uma conta. Corpo JSON: `email`, `password`.                                             |
+| `POST` | `/users/login`            | Não          | Retorna um token de acesso JWT. Corpo JSON: `email`, `password`.                             |
+| `GET`  | `/users/me`               | JWT          | Retorna o usuário autenticado.                                                               |
+| `POST` | `/unify_files`            | Não          | Junta vários arquivos da mesma base. Multipart: `files`, `databaseType` (`scopus` ou `wos`). |
+| `POST` | `/process`                | JWT          | Cria uma análise assíncrona combinando fontes diferentes.                                    |
+| `GET`  | `/analyses/<analysis_id>` | JWT          | Consulta o estado e os resultados de uma análise do usuário.                                 |
+| `GET`  | `/download/<file_name>`   | Não          | Baixa um arquivo gerado que ainda não expirou.                                               |
+| `POST` | `/graph`                  | Não          | Gera uma rede de coautoria ou palavras-chave.                                                |
+| `POST` | `/chart_bar`              | Não          | Retorna contagens para gráficos de barras.                                                   |
 
 ### Processar e integrar fontes
 
 `POST /process` recebe `multipart/form-data`. Informe pelo menos duas fontes dentre `scopusFile`, `wosFile` e `searchTerm`.
 
-| Campo | Tipo | Obrigatório | Descrição |
-| --- | --- | --- | --- |
-| `scopusFile` | arquivo | Condicional | Exportação Scopus em CSV. |
-| `wosFile` | arquivo | Condicional | Exportação Web of Science. |
-| `searchTerm` | texto | Condicional | Consulta para recuperar trabalhos no OpenAlex. |
-| `outputFormat` | texto | Sim | `scopus`, `openalex` ou `wos`. Define o formato do arquivo resultante. |
-| `limit` | inteiro | Não | Limite de resultados ao consultar o OpenAlex. |
+| Campo          | Tipo    | Obrigatório | Descrição                                                              |
+| -------------- | ------- | ----------- | ---------------------------------------------------------------------- |
+| `scopusFile`   | arquivo | Condicional | Exportação Scopus em CSV.                                              |
+| `wosFile`      | arquivo | Condicional | Exportação Web of Science.                                             |
+| `searchTerm`   | texto   | Condicional | Consulta para recuperar trabalhos no OpenAlex.                         |
+| `outputFormat` | texto   | Sim         | `scopus`, `openalex` ou `wos`. Define o formato do arquivo resultante. |
+| `limit`        | inteiro | Não         | Limite de resultados ao consultar o OpenAlex.                          |
 
 Exemplo:
 
@@ -162,10 +160,10 @@ Enquanto estiver pendente ou em processamento, `created_at` e `expires_at` são 
 
 `POST /graph` recebe `multipart/form-data`:
 
-| Campo | Valores |
-| --- | --- |
+| Campo       | Valores                                  |
+| ----------- | ---------------------------------------- |
 | `graphFile` | Arquivo Scopus (`.csv`) ou WoS (`.txt`). |
-| `graphType` | `coauthorship` ou `keywords`. |
+| `graphType` | `coauthorship` ou `keywords`.            |
 
 A resposta inclui `nodes`, `edges`, `download_url` e `file_name`. Para manter a visualização responsiva, redes muito grandes são simplificadas para no máximo 5.000 nós e 12.000 arestas na prévia; o arquivo `.net` baixável preserva a rede completa.
 

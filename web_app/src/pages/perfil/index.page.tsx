@@ -4,6 +4,7 @@ import {
   ClockCountdown,
   DownloadSimple,
   File,
+  Key,
   SpinnerGap,
   UserCircle,
   WarningCircle,
@@ -11,7 +12,8 @@ import {
 import type { GetServerSideProps } from "next";
 import Head from "next/head";
 import { useState } from "react";
-import { useAuth } from "../../contexts/AuthContext";
+import { toast } from "sonner";
+import { OpenAlexKeyError, useAuth } from "../../contexts/AuthContext";
 import { DeleteAccountDialog } from "./components/dialog";
 import { PerfilFallback } from "./components/fallback";
 import { MainLayout } from "@/src/layouts/MainLayout";
@@ -53,7 +55,8 @@ function formatDate(date: string | null) {
 function formatExpiration(expiresAt: string | null) {
   if (!expiresAt) return "Expiração será definida ao concluir";
   const expiresAtDate = new Date(expiresAt);
-  const prefix = expiresAtDate.getTime() > Date.now() ? "Expira em" : "Expirada em";
+  const prefix =
+    expiresAtDate.getTime() > Date.now() ? "Expira em" : "Expirada em";
 
   return `${prefix} ${formatDate(expiresAt)}`;
 }
@@ -98,8 +101,34 @@ export const getServerSideProps: GetServerSideProps = async ({
 };
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, updateOpenAlexKey } = useAuth();
   const [openAnalysis, setOpenAnalysis] = useState<string | null>(null);
+  const [apiKeyDraft, setApiKeyDraft] = useState("");
+  const [editingApiKey, setEditingApiKey] = useState(false);
+  const [savingApiKey, setSavingApiKey] = useState(false);
+
+  async function handleSaveApiKey() {
+    if (!apiKeyDraft.trim()) {
+      toast.error("Informe uma chave de API.", { richColors: true });
+      return;
+    }
+    setSavingApiKey(true);
+    try {
+      await updateOpenAlexKey(apiKeyDraft.trim());
+      setApiKeyDraft("");
+      setEditingApiKey(false);
+      toast.success("Chave salva com sucesso.", { richColors: true });
+    } catch (error) {
+      toast.error(
+        error instanceof OpenAlexKeyError
+          ? error.message
+          : "Não foi possível salvar a chave. Entre em contato com o suporte: nbviz.suporte@gmail.com.",
+        { richColors: true },
+      );
+    } finally {
+      setSavingApiKey(false);
+    }
+  }
 
   if (!user) {
     return <PerfilFallback />;
@@ -140,6 +169,85 @@ export default function ProfilePage() {
           <DeleteAccountDialog />
         </section>
 
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+              <Key size={31} weight="fill" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <label
+                htmlFor="openalex-api-key"
+                className="text-sm font-semibold text-slate-800"
+              >
+                Chave de API OpenAlex
+              </label>
+              <p className="mt-1 text-sm text-slate-500">
+                Encontre sua chave nas{" "}
+                <a
+                  href="https://openalex.org/settings/api-key"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-blue-700 underline hover:text-blue-900"
+                >
+                  configurações do OpenAlex
+                </a>
+                .
+              </p>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <input
+                  id="openalex-api-key"
+                  type="password"
+                  autoComplete="off"
+                  value={apiKeyDraft}
+                  onChange={(event) => setApiKeyDraft(event.target.value)}
+                  readOnly={!editingApiKey || savingApiKey}
+                  placeholder={
+                    editingApiKey ? "Digite sua chave" : "Chave protegida"
+                  }
+                  className={`min-w-0 flex-1 rounded-lg border px-3 py-2.5 text-sm outline-none transition-colors ${
+                    editingApiKey
+                      ? "border-blue-500 bg-white text-slate-800 ring-2 ring-blue-100"
+                      : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-500"
+                  }`}
+                />
+                {editingApiKey ? (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setApiKeyDraft("");
+                        setEditingApiKey(false);
+                      }}
+                      disabled={savingApiKey}
+                      className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveApiKey}
+                      disabled={savingApiKey}
+                      className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                    >
+                      {savingApiKey ? "Salvando..." : "Confirmar"}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingApiKey(true);
+                    }}
+                    className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                  >
+                    Editar chave
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-2 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -163,116 +271,116 @@ export default function ProfilePage() {
                   new Date(firstAnalysis.created_at ?? 0).getTime(),
               )
               .map((a) => {
-              const status = statusStyle[a.status];
-              const StatusIcon = status.icon;
-              const isOpen = openAnalysis === a.id;
-              const files = [
-                a.download_url && {
-                  label: "Mesclagem",
-                  url: a.download_url,
-                },
-                a.removed_url && {
-                  label: "Registros removidos",
-                  url: a.removed_url,
-                },
-              ].filter(
-                (
-                  file,
-                ): file is {
-                  label: string;
-                  url: string;
-                } => Boolean(file),
-              );
-              const canDownload = files.length > 0;
+                const status = statusStyle[a.status];
+                const StatusIcon = status.icon;
+                const isOpen = openAnalysis === a.id;
+                const files = [
+                  a.download_url && {
+                    label: "Mesclagem",
+                    url: a.download_url,
+                  },
+                  a.removed_url && {
+                    label: "Registros removidos",
+                    url: a.removed_url,
+                  },
+                ].filter(
+                  (
+                    file,
+                  ): file is {
+                    label: string;
+                    url: string;
+                  } => Boolean(file),
+                );
+                const canDownload = files.length > 0;
 
-              return (
-                <article key={a.id} className="px-6 py-5">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="truncate font-semibold text-slate-800">
-                          {a.title}
-                        </h3>
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}
-                        >
-                          <StatusIcon
-                            size={14}
-                            className={
-                              a.status === "processing" ? "animate-spin" : ""
-                            }
-                          />
-                          {status.label}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {a.used_bases.join(" · ")}
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate-500">
-                        <span>Criada em {formatDate(a.created_at)}</span>
-                        <span className="inline-flex items-center gap-1">
-                          <ClockCountdown size={16} />{" "}
-                          {formatExpiration(a.expires_at)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled={!canDownload}
-                      onClick={() => setOpenAnalysis(isOpen ? null : a.id)}
-                      className="inline-flex w-fit items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-                    >
-                      {canDownload ? "Ver arquivos" : "Aguardando resultado"}
-                      <CaretDown
-                        size={17}
-                        className={
-                          isOpen
-                            ? "rotate-180 transition-transform"
-                            : "transition-transform"
-                        }
-                      />
-                    </button>
-                  </div>
-
-                  {isOpen && (
-                    <div className="mt-5 space-y-5 border-t border-slate-100 pt-5">
-                      <div className="grid gap-3 md:grid-cols-2">
-                        {files.map((file) => (
-                          <div
-                            key={file.url}
-                            className="rounded-lg bg-slate-50 p-4"
+                return (
+                  <article key={a.id} className="px-6 py-5">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="truncate font-semibold text-slate-800">
+                            {a.title}
+                          </h3>
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}
                           >
-                            <div className="flex items-start justify-between gap-3">
-                              <File
-                                size={22}
-                                className="shrink-0 text-blue-600"
-                              />
-                              <span className="rounded bg-white px-2 py-1 text-xs font-medium text-slate-500">
-                                {file.label}
-                              </span>
-                            </div>
-                            <p className="mt-4 truncate text-sm font-semibold text-slate-700">
-                              {file.url.split("/").pop()}
-                            </p>
-                            <a
-                              href={`/api/proxy${file.url}`}
-                              download
-                              className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900"
-                            >
-                              <DownloadSimple size={17} /> Baixar
-                            </a>
-                          </div>
-                        ))}
+                            <StatusIcon
+                              size={14}
+                              className={
+                                a.status === "processing" ? "animate-spin" : ""
+                              }
+                            />
+                            {status.label}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {a.used_bases.join(" · ")}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate-500">
+                          <span>Criada em {formatDate(a.created_at)}</span>
+                          <span className="inline-flex items-center gap-1">
+                            <ClockCountdown size={16} />{" "}
+                            {formatExpiration(a.expires_at)}
+                          </span>
+                        </div>
                       </div>
 
-                      {a.venn && a.venn.length > 0 && (
-                        <VennSection rows={a.venn} />
-                      )}
+                      <button
+                        type="button"
+                        disabled={!canDownload}
+                        onClick={() => setOpenAnalysis(isOpen ? null : a.id)}
+                        className="inline-flex w-fit items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                      >
+                        {canDownload ? "Ver arquivos" : "Aguardando resultado"}
+                        <CaretDown
+                          size={17}
+                          className={
+                            isOpen
+                              ? "rotate-180 transition-transform"
+                              : "transition-transform"
+                          }
+                        />
+                      </button>
                     </div>
-                  )}
-                </article>
-              );
+
+                    {isOpen && (
+                      <div className="mt-5 space-y-5 border-t border-slate-100 pt-5">
+                        <div className="grid gap-3 md:grid-cols-2">
+                          {files.map((file) => (
+                            <div
+                              key={file.url}
+                              className="rounded-lg bg-slate-50 p-4"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <File
+                                  size={22}
+                                  className="shrink-0 text-blue-600"
+                                />
+                                <span className="rounded bg-white px-2 py-1 text-xs font-medium text-slate-500">
+                                  {file.label}
+                                </span>
+                              </div>
+                              <p className="mt-4 truncate text-sm font-semibold text-slate-700">
+                                {file.url.split("/").pop()}
+                              </p>
+                              <a
+                                href={`/api/proxy${file.url}`}
+                                download
+                                className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900"
+                              >
+                                <DownloadSimple size={17} /> Baixar
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+
+                        {a.venn && a.venn.length > 0 && (
+                          <VennSection rows={a.venn} />
+                        )}
+                      </div>
+                    )}
+                  </article>
+                );
               })}
 
             {analyses.length === 0 && (

@@ -17,6 +17,8 @@ class Users(db.Model):
     )
     email: Mapped[str] = mapped_column(unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(nullable=False)
+    openalex_api_key_hash: Mapped[str | None] = mapped_column(nullable=True)
+    openalex_api_key_encrypted: Mapped[str | None] = mapped_column(nullable=True)
 
     password_reset_token_hash: Mapped[str | None] = mapped_column(nullable=True)
     password_reset_expires_at: Mapped[datetime | None] = mapped_column(
@@ -34,6 +36,7 @@ class Users(db.Model):
         return {
             "id": str(self.id),
             "email": self.email,
+            "has_key": bool(self.openalex_api_key_encrypted),
             "analyses": [analysis.to_dict() for analysis in self.analyses],
         }
 

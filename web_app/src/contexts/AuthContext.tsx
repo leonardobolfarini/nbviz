@@ -28,8 +28,11 @@ type Analyses = {
 type User = {
   id: string;
   email: string;
+  has_key: boolean;
   analyses: Analyses[];
 };
+
+export class OpenAlexKeyError extends Error {}
 
 type AuthContextData = {
   user: User | null;
@@ -38,6 +41,7 @@ type AuthContextData = {
   refreshUser: () => Promise<void>;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
+  updateOpenAlexKey: (key: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextData | null>(null);
@@ -86,6 +90,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
+  async function updateOpenAlexKey(key: string) {
+    const response = await fetch("/api/openalex-key", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ openalex_key: key }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      if (data?.code === "invalid_key") {
+        throw new OpenAlexKeyError(
+          "A chave é inválida. Verifique se você a digitou corretamente.",
+        );
+      }
+      if (data?.code === "rate_limited") {
+        throw new OpenAlexKeyError(
+          "O limite de uso do OpenAlex foi atingido. Não foi possível salvar a chave; tente novamente mais tarde.",
+        );
+      }
+      throw new Error("Não foi possível salvar a chave.");
+    }
+
+    setUser((currentUser) =>
+      currentUser ? { ...currentUser, has_key: true } : currentUser,
+    );
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -95,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refreshUser,
         logout,
         deleteAccount,
+        updateOpenAlexKey,
       }}
     >
       {children}

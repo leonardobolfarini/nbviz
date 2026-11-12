@@ -115,6 +115,9 @@ def process_files():
             400,
         )
 
+    if openalex_search and not user.openalex_api_key_encrypted:
+        return make_response(jsonify({"message": "OpenAlex API key is required."}), 400)
+
     used_bases = []
     if scopus_file:
         used_bases.append("Scopus")
