@@ -11,7 +11,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import type { GetServerSideProps } from "next";
 import Head from "next/head";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { OpenAlexKeyError, useAuth } from "../../contexts/AuthContext";
 import { DeleteAccountDialog } from "./components/dialog";
@@ -101,11 +101,22 @@ export const getServerSideProps: GetServerSideProps = async ({
 };
 
 export default function ProfilePage() {
-  const { user, updateOpenAlexKey } = useAuth();
+  const { user, updateOpenAlexKey, refreshUser } = useAuth();
   const [openAnalysis, setOpenAnalysis] = useState<string | null>(null);
   const [apiKeyDraft, setApiKeyDraft] = useState("");
   const [editingApiKey, setEditingApiKey] = useState(false);
   const [savingApiKey, setSavingApiKey] = useState(false);
+  const hasPending =
+    user?.analyses.some(
+      (item) => item.status === "pending" || item.status === "processing",
+    ) ?? false;
+  useEffect(() => {
+    if (!hasPending) return;
+    const timer = window.setInterval(() => {
+      void refreshUser();
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [hasPending]);
 
   async function handleSaveApiKey() {
     if (!apiKeyDraft.trim()) {
@@ -149,7 +160,7 @@ export default function ProfilePage() {
             <h1 className="text-3xl font-bold text-slate-800">Meu perfil</h1>
           </div>
           <p className="mt-2 text-slate-500">
-            Acompanhe suas mesclagens enquanto os arquivos estiverem
+            Acompanhe suas mesclagens e tesauros enquanto os arquivos estiverem
             disponíveis.
           </p>
         </header>
@@ -252,7 +263,7 @@ export default function ProfilePage() {
           <div className="flex flex-col gap-2 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-slate-800">
-                Suas mesclagens
+                Seus processamentos
               </h2>
               <p className="mt-1 text-sm text-slate-500">
                 Arquivos ficam disponíveis por até três horas após a criação.
@@ -276,7 +287,9 @@ export default function ProfilePage() {
                 const isOpen = openAnalysis === a.id;
                 const files = [
                   a.download_url && {
-                    label: "Mesclagem",
+                    label: a.download_url.includes("autores_padronizados_")
+                      ? "Autores padronizados"
+                      : "Mesclagem",
                     url: a.download_url,
                   },
                   a.removed_url && {
@@ -385,7 +398,7 @@ export default function ProfilePage() {
 
             {analyses.length === 0 && (
               <p className="px-6 py-10 text-center text-sm text-slate-500">
-                Você ainda não tem nenhuma mesclagem.
+                Você ainda não tem nenhum processamento.
               </p>
             )}
           </div>

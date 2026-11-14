@@ -1,5 +1,6 @@
 import {
   Database,
+  BookBookmark,
   Info,
   Stack,
   TrendUp,
@@ -13,6 +14,7 @@ const publicLinks = [
   { href: "/", label: "Sobre", icon: Info },
   { href: "/mesclagem", label: "Mesclagem", icon: Database },
   { href: "/unificar", label: "Unificar", icon: Stack },
+  { href: "/tesauro", label: "Tesauro", icon: BookBookmark },
   { href: "/redes", label: "Redes", icon: Users },
   { href: "/analises", label: "Análises", icon: TrendUp },
 ];

@@ -25,7 +25,9 @@ export default async function handler(
   const path = req.query.path;
 
   if (!internalApiUrl || !Array.isArray(path) || path.length === 0) {
-    return res.status(500).json({ message: "Internal API URL is not configured." });
+    return res
+      .status(500)
+      .json({ message: "Internal API URL is not configured." });
   }
 
   const upstreamUrl = new URL(
@@ -44,6 +46,14 @@ export default async function handler(
   }
 
   const headers = new Headers();
+  if (path.length === 1 && path[0] === "standardize_authors") {
+    const token = req.cookies["nbviz.token"];
+    if (!token)
+      return res
+        .status(401)
+        .json({ message: "Faça login para usar o tesauro." });
+    headers.set("Authorization", `Bearer ${token}`);
+  }
   for (const header of REQUEST_HEADERS) {
     const value = req.headers[header];
     if (typeof value === "string") headers.set(header, value);
@@ -73,7 +83,9 @@ export default async function handler(
   } catch (error) {
     console.error("Failed to stream API proxy response", error);
     if (!res.headersSent) {
-      return res.status(502).json({ message: "Unable to stream API response." });
+      return res
+        .status(502)
+        .json({ message: "Unable to stream API response." });
     }
   }
 }

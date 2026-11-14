@@ -3,7 +3,7 @@ import shutil
 import uuid
 
 from dotenv import load_dotenv
-from flask import Blueprint, jsonify, make_response, request, send_file
+from flask import Blueprint, current_app, jsonify, make_response, request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from src.extensions.database import db
 from src.extensions.queue import processing_queue
@@ -18,6 +18,74 @@ import nbviz_scientometric_tools as st
 
 load_dotenv()
 files_bp = Blueprint("files", __name__)
+
+
+@files_bp.route("/standardize_authors", methods=["POST"])
+@jwt_required()
+def standardize_authors():
+    bibliographic_file = request.files.get("file")
+    thesaurus_file = request.files.get("thesaurusFile")
+    database = request.form.get("databaseType")
+
+    if not bibliographic_file or not thesaurus_file:
+        return jsonify({"message": "Envie os arquivos 'file' e 'thesaurusFile'."}), 400
+    if database not in {"scopus", "wos"}:
+        return jsonify({"message": "databaseType deve ser 'scopus' ou 'wos'."}), 400
+
+    user = db.session.scalars(
+        db.select(Users).where(Users.email == get_jwt_identity())
+    ).one()
+    analysis = None
+    input_folder = None
+
+    try:
+        st.read_tesauro(thesaurus_file)
+        thesaurus_file.seek(0)
+        analysis = Analyses(
+            title="Tesauro de autores",
+            used_bases=["Scopus" if database == "scopus" else "Web of Science"],
+            user_id=user.id,
+        )
+        db.session.add(analysis)
+        db.session.commit()
+
+        input_folder = os.path.join(INPUT_FOLDER, str(analysis.id))
+        os.makedirs(input_folder, exist_ok=True)
+
+        data_path = os.path.join(input_folder, "bibliographic")
+        thesaurus_path = os.path.join(input_folder, "thesaurus")
+
+        bibliographic_file.save(data_path)
+        thesaurus_file.save(thesaurus_path)
+
+        job = processing_queue.enqueue(
+            "src.tasks.processing.process_thesaurus",
+            str(analysis.id),
+            data_path,
+            thesaurus_path,
+            database,
+            input_folder,
+        )
+
+        return jsonify(
+            {"id": str(analysis.id), "job_id": job.id, "status": analysis.status}
+        ), 202
+    except (ValueError, UnicodeDecodeError) as error:
+        return jsonify({"message": str(error)}), 400
+    except Exception:
+        current_app.logger.exception("Não foi possível enfileirar o tesauro")
+        db.session.rollback()
+        if analysis is not None:
+            failed = db.session.get(Analyses, analysis.id)
+
+            if failed is not None:
+                failed.status = "error"
+                db.session.commit()
+        if input_folder:
+            shutil.rmtree(input_folder, ignore_errors=True)
+        return jsonify(
+            {"message": "Não foi possível enviar o tesauro para processamento."}
+        ), 500
 
 
 @files_bp.route("/analyses/<analysis_id>", methods=["GET"])

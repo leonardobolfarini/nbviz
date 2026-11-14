@@ -23,6 +23,38 @@ import nbviz_scientometric_tools as st
 logger = logging.getLogger(__name__)
 
 
+def process_thesaurus(analysis_id, data_path, thesaurus_path, database, input_folder):
+    with app.app_context():
+        try:
+            analysis = db.session.get(Analyses, UUID(analysis_id))
+            if analysis is None:
+                return
+            analysis.status = "processing"
+            db.session.commit()
+            with open(thesaurus_path, "rb") as thesaurus_file:
+                df = st.authors_standardization(data_path, database, thesaurus_file)
+            os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+            extension = "txt" if database == "wos" else "csv"
+            output_name = f"autores_padronizados_{analysis.id}.{extension}"
+            df.write_csv(os.path.join(OUTPUT_FOLDER, output_name), separator="\t" if database == "wos" else ",")
+            analysis.download_url = f"/download/{output_name}"
+            completed_at = datetime.now(timezone.utc)
+            analysis.created_at = completed_at
+            analysis.expires_at = completed_at + timedelta(hours=3)
+            analysis.status = "finished"
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            failed = db.session.get(Analyses, UUID(analysis_id))
+            if failed is not None:
+                failed.status = "error"
+                db.session.commit()
+            logger.exception("Thesaurus processing failed for analysis %s", analysis_id)
+            raise
+        finally:
+            shutil.rmtree(input_folder, ignore_errors=True)
+
+
 def process_analysis(
     analysis_id: str,
     scopus_path: str | None,

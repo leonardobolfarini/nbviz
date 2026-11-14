@@ -30,6 +30,13 @@ const features = [
     "orange",
   ],
   [
+    "Tesauro de Autores",
+    "Padronize variações de nomes de autores usando um arquivo de tesauro.",
+    "/tesauro",
+    BookBookmark,
+    "blue",
+  ],
+  [
     "Análises Estatísticas",
     "Gere gráficos de barras e linhas para observar distribuições e tendências das publicações.",
     "/analises",
@@ -205,9 +212,7 @@ export default function Home() {
                     <h3 className="font-semibold text-slate-800">{title}</h3>
                   </div>
                 </div>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {text}
-                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{text}</p>
               </div>
             ))}
           </div>

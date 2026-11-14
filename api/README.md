@@ -116,11 +116,31 @@ Authorization: Bearer <access_token>
 | `POST` | `/users/login`            | Não          | Retorna um token de acesso JWT. Corpo JSON: `email`, `password`.                             |
 | `GET`  | `/users/me`               | JWT          | Retorna o usuário autenticado.                                                               |
 | `POST` | `/unify_files`            | Não          | Junta vários arquivos da mesma base. Multipart: `files`, `databaseType` (`scopus` ou `wos`). |
+| `POST` | `/standardize_authors`    | JWT          | Enfileira a padronização de autores com um tesauro.                                          |
 | `POST` | `/process`                | JWT          | Cria uma análise assíncrona combinando fontes diferentes.                                    |
 | `GET`  | `/analyses/<analysis_id>` | JWT          | Consulta o estado e os resultados de uma análise do usuário.                                 |
 | `GET`  | `/download/<file_name>`   | Não          | Baixa um arquivo gerado que ainda não expirou.                                               |
 | `POST` | `/graph`                  | Não          | Gera uma rede de coautoria ou palavras-chave.                                                |
 | `POST` | `/chart_bar`              | Não          | Retorna contagens para gráficos de barras.                                                   |
+
+### Padronizar autores
+
+`POST /standardize_authors` recebe `multipart/form-data` com `file` (arquivo bibliográfico), `thesaurusFile` (tesauro UTF-8) e `databaseType` (`scopus` ou `wos`). A resposta é `202` com o identificador da análise e do trabalho na fila. Consulte `GET /analyses/<analysis_id>` ou a página Meu perfil para acompanhar o processamento e baixar o resultado (CSV para Scopus ou TXT tabulado para WoS). A comparação considera o nome completo, incluindo maiúsculas, minúsculas e pontuação.
+
+O tesauro tem um cabeçalho e uma regra por linha, no formato:
+
+```text
+Nome a manter | Nomes substituídos
+Bolfarini, N. L. | [Neves, B. L; Bolfarini, Leonardo]
+```
+
+```bash
+curl -X POST http://127.0.0.1:5009/standardize_authors \
+  -H 'Authorization: Bearer <access_token>' \
+  -F 'file=@trabalhos.csv' \
+  -F 'thesaurusFile=@tesauro.txt' \
+  -F 'databaseType=scopus'
+```
 
 ### Processar e integrar fontes
 
